@@ -1,0 +1,102 @@
+[
+  {
+    "contract_id": "research_prior_work",
+    "family": "research_ideation",
+    "cue": "User asks to brainstorm, evaluate, refine, or compare AI/ML research paper ideas.",
+    "guard": "Applies only to research-paper ideation, not ordinary explanation of research terms.",
+    "action": "Identify closest prior work before developing ideas; kill ideas that are too close.",
+    "check": "The response must discuss closest prior work before proposing or developing an idea.",
+    "priority": "high",
+    "status": "active"
+  },
+  {
+    "contract_id": "nut_safety",
+    "family": "food_safety",
+    "cue": "User asks for food advice, recipes, restaurants, or snacks.",
+    "guard": "Applies when the advice could involve ingredients, kitchens, restaurants, or packaged food.",
+    "action": "Check peanut and tree-nut safety, including cross-contamination risk.",
+    "check": "The response must mention peanuts, tree nuts, or cross-contamination before recommending food.",
+    "priority": "high",
+    "status": "active"
+  },
+  {
+    "contract_id": "flask_auth_security",
+    "family": "code_security",
+    "cue": "User asks to review Flask or Python authentication code.",
+    "guard": "Applies to code review or implementation involving auth, sessions, cookies, login, or secrets.",
+    "action": "Check for hardcoded secrets and unsafe session or session-cookie logic.",
+    "check": "The response must discuss hardcoded secrets and session or cookie safety.",
+    "priority": "high",
+    "status": "active"
+  },
+  {
+    "contract_id": "entry_constraints",
+    "family": "travel_planning",
+    "cue": "User asks for international travel planning or itinerary advice.",
+    "guard": "Applies to cross-border travel, visas, passports, entry rules, or layovers.",
+    "action": "Check visa, passport, and entry constraints before itinerary details.",
+    "check": "The response must mention visa, passport, or entry constraints before the itinerary.",
+    "priority": "high",
+    "status": "active"
+  },
+  {
+    "contract_id": "health_uncertainty",
+    "family": "medical_caution",
+    "cue": "User asks for health-related advice, triage, symptoms, treatment, or medication discussion.",
+    "guard": "Applies to personal medical advice, not purely historical or vocabulary questions.",
+    "action": "Include uncertainty and recommend professional care when appropriate.",
+    "check": "The response must mention uncertainty and professional care or a clinician when appropriate.",
+    "priority": "high",
+    "status": "active"
+  },
+  {
+    "contract_id": "plain_professional_email",
+    "family": "email_rewriting",
+    "cue": "User asks to rewrite, polish, or draft a work email.",
+    "guard": "Applies to workplace email wording, not creative fiction or private diary writing.",
+    "action": "Keep wording simple, clear, and professional.",
+    "check": "The response must provide simple, clear, professional wording.",
+    "priority": "high",
+    "status": "active"
+  },
+  {
+    "contract_id": "benchmark_contribution_role",
+    "family": "benchmark_novelty",
+    "cue": "User proposes or evaluates benchmark ideas.",
+    "guard": "Applies to research benchmark proposals, not ordinary test-taking or product QA.",
+    "action": "Determine whether the benchmark is the main contribution or only an evaluation protocol.",
+    "check": "The response must state whether the benchmark is the main contribution or an evaluation protocol.",
+    "priority": "high",
+    "status": "active"
+  },
+  {
+    "contract_id": "schedule_conflict_check",
+    "family": "scheduling",
+    "cue": "User asks to schedule tasks, meetings, calls, or reminders.",
+    "guard": "Applies when proposing times, sequencing calendar tasks, or committing availability.",
+    "action": "Check conflicts before proposing times.",
+    "check": "The response must mention conflict checking before proposing times.",
+    "priority": "high",
+    "status": "active"
+  },
+  {
+    "contract_id": "verify_current_facts",
+    "family": "current_facts",
+    "cue": "User asks about current, recent, or changeable facts.",
+    "guard": "Applies to news, prices, laws, schedules, leaders, APIs, or other unstable facts.",
+    "action": "Verify with an external source or tool before giving a confident answer.",
+    "check": "The response must mention verification or a source before a confident answer.",
+    "priority": "high",
+    "status": "active"
+  },
+  {
+    "contract_id": "cs_major_selectivity",
+    "family": "admissions_cs",
+    "cue": "User asks about computer science admissions odds, school lists, or application strategy.",
+    "guard": "Applies to admissions advice where CS or selective major admission may differ from general university admission.",
+    "action": "Separate general university odds from major-specific or selective-program odds.",
+    "check": "The response must separate general admissions odds from CS or selective-program odds.",
+    "priority": "high",
+    "status": "active"
+  }
+]
