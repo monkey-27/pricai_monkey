@@ -1,38 +1,27 @@
-import pytest
-
-from pact.schema import Episode, ProspectiveActionContract
-
-
-def test_contract_validation_rejects_bad_priority():
-    with pytest.raises(ValueError):
-        ProspectiveActionContract.from_dict(
-            {
-                "contract_id": "x",
-                "family": "f",
-                "cue": "cue",
-                "guard": "guard",
-                "action": "action",
-                "check": "check",
-                "priority": "urgent",
-                "status": "active",
-            }
-        )
+from pact.dataset import build_contracts, build_episodes
+from pact.schema import InferenceEpisode
 
 
-def test_episode_validation_rejects_bad_case_type():
-    with pytest.raises(ValueError):
-        Episode.from_dict(
-            {
-                "episode_id": "e",
-                "contract_id": "c",
-                "family": "f",
-                "case_type": "maybe",
-                "history_summary": "history",
-                "current_query": "query",
-                "gold_state": "fire",
-                "expected_action_keywords": [],
-                "forbidden_action_keywords": [],
-                "notes": "notes",
-            }
-        )
+def test_valid_contracts_and_episodes():
+    assert len(build_contracts()) == 12
+    episode = build_episodes("pact_causal_520")[0]
+    assert episode.episode_id
+    assert episode.gold_state in {"fire", "suppress", "conflict", "already_satisfied"}
+
+
+def test_inference_episode_excludes_scoring_fields():
+    inf = build_episodes("pact_causal_520")[0].to_inference()
+    assert isinstance(inf, InferenceEpisode)
+    for forbidden in [
+        "gold_state",
+        "case_type",
+        "expected_action_keywords",
+        "forbidden_action_keywords",
+        "completion_rubric",
+        "notes",
+        "contrast_role",
+        "paraphrase_group_id",
+        "set_type",
+    ]:
+        assert not hasattr(inf, forbidden)
 

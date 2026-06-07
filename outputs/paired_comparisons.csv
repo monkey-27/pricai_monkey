@@ -1,0 +1,3 @@
+comparison,absolute_gain,mcnemar_holm_p,bootstrap_ci_low,bootstrap_ci_high
+PACTFull_vs_QueryOnlyClassifier,0.34195402298850575,2.1684418991256175e-28,0.26495726495726496,0.4
+PACTFull_vs_ContractShufflePACT,0.3017241379310345,9.11799030781427e-24,0.22157434402332363,0.36253776435045315

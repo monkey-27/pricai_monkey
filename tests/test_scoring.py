@@ -1,47 +1,31 @@
-from pact.scoring import score_method
-from pact.schema import Episode, Prediction
+from pact.dataset import build_episodes
+from pact.schema import Prediction
+from pact.scoring import action_completed, score_method
 
 
-def _episode(gold_state="fire", case_type="direct_trigger"):
-    return Episode.from_dict(
-        {
-            "episode_id": "e1",
-            "contract_id": "c1",
-            "family": "f",
-            "case_type": case_type,
-            "history_summary": "history",
-            "current_query": "query",
-            "gold_state": gold_state,
-            "expected_action_keywords": ["alpha", "beta"],
-            "forbidden_action_keywords": ["bad"],
-            "notes": "toy",
-        }
-    )
+def pred(ep, state, response):
+    return Prediction("m", ep.episode_id, ep.contract_id, state, 1.0, response, True, False, "toy")
 
 
-def _prediction(state="fire", response="alpha beta"):
-    return Prediction(
-        method="m",
-        episode_id="e1",
-        contract_id="c1",
-        predicted_state=state,
-        confidence=1.0,
-        response=response,
-        satisfied=True,
-        repaired=False,
-        rationale="toy",
-    )
-
-
-def test_scoring_toy_fire_completion():
-    metrics = score_method([_episode()], [_prediction()])
-    assert metrics["trigger_accuracy"] == 1.0
+def test_trigger_and_completion_metrics():
+    ep = next(e for e in build_episodes("pact_causal_520") if e.gold_state == "fire")
+    response = " ".join(ep.expected_action_keywords)
+    metrics = score_method([ep], [pred(ep, "fire", response)])
     assert metrics["fire_precision"] == 1.0
-    assert metrics["action_completion_rate_gold_fire"] == 1.0
+    assert metrics["end_to_end_success"] == 1.0
+    assert action_completed(ep, pred(ep, "fire", response))
 
 
-def test_scoring_zero_division_no_fire_predictions():
-    metrics = score_method([_episode(gold_state="suppress", case_type="near_miss")], [_prediction(state="suppress", response="")])
-    assert metrics["fire_precision"] == 0.0
-    assert metrics["false_trigger_rate_near_wrong"] == 0.0
+def test_false_trigger_denominator_and_special_states():
+    near = next(e for e in build_episodes("pact_causal_520") if e.case_type == "near_miss")
+    already = next(e for e in build_episodes("pact_causal_520") if e.gold_state == "already_satisfied")
+    conflict = next(e for e in build_episodes("pact_causal_520") if e.gold_state == "conflict")
+    metrics = score_method(
+        [near, already, conflict],
+        [pred(near, "suppress", ""), pred(already, "already_satisfied", ""), pred(conflict, "conflict", " ".join(conflict.expected_action_keywords))],
+    )
+    assert metrics["false_trigger_rate"] == 0.0
+    assert metrics["already_satisfied_accuracy"] == 1.0
+    assert metrics["conflict_accuracy"] == 1.0
+    assert metrics["weighted_utility"] > 0
 

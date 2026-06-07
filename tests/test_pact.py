@@ -1,22 +1,24 @@
-from pact.baselines import EpisodeInput
-from pact.dataset import build_contracts
+from pact.dataset import build_contracts, build_episodes
 from pact.pact import PACTFull
+from pact.scoring import action_completed, score_method
 
 
-def test_pact_checker_repair_increases_satisfaction():
+def test_checker_repair_increases_completion():
     contracts = build_contracts()
-    episode = EpisodeInput(
-        episode_id="x",
-        history_summary="No relevant prior steps are recorded.",
-        current_query="Could Orbit-of-Thought work as a PRICAI submission if we frame it around agent planning?",
-    )
-    method = PACTFull()
-    contract, score = method.retrieve(contracts, episode)
-    pam = method.pam(contract, episode, score)
-    initial = method.generate_response(contract, pam)
-    assert not method.use_checker or not method.repair(contract, initial) == initial
-    prediction = method.predict(contracts, episode)
-    assert prediction.predicted_state == "fire"
-    assert prediction.repaired
-    assert prediction.satisfied
+    ep = next(e for e in build_episodes("pact_causal_520") if e.case_type == "indirect_trigger")
+    full = PACTFull().predict(contracts, ep.to_inference())
+    no_checker = PACTFull(use_checker=False, name="PACT_no_checker").predict(contracts, ep.to_inference())
+    assert full.repaired
+    assert action_completed(ep, full)
+    assert not action_completed(ep, no_checker)
+
+
+def test_no_guard_and_shuffle_controls_on_toys():
+    contracts = build_contracts()
+    eps = [e for e in build_episodes("pact_causal_520") if e.case_type in {"wrong_scope", "indirect_trigger"}][:8]
+    full = [PACTFull().predict(contracts, e.to_inference()) for e in eps]
+    no_guard = [PACTFull(use_guard=False, name="PACT_no_guard").predict(contracts, e.to_inference()) for e in eps]
+    shuffle = [PACTFull(shuffle=True, name="ContractShufflePACT").predict(contracts, e.to_inference()) for e in eps]
+    assert score_method(eps, no_guard)["false_trigger_rate"] >= score_method(eps, full)["false_trigger_rate"]
+    assert score_method(eps, shuffle)["end_to_end_success"] <= score_method(eps, full)["end_to_end_success"]
 

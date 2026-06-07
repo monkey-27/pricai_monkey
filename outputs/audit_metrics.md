@@ -1,9 +1,8 @@
 # Metric Audit Agent
 
 Simulated subagent: Metric Audit Agent.
-
-Zero division is handled by safe division returning 0.0.
-False-trigger rate is defined over near_miss and wrong_scope gold-suppress examples.
-Action completion is evaluated for gold fire cases and separately for indirect fire cases.
-
+False-trigger rate denominator is gold-suppress near_miss plus wrong_scope.
+Already-satisfied and conflict are scored separately.
+Zero division uses deterministic 0.0 fallback.
+Weighted utility implements the preregistered signs and penalties.
 Result: PASS

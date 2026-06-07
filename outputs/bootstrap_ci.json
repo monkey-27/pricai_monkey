@@ -1,0 +1,12 @@
+{
+  "ContractShufflePACT": {
+    "ci_high": 0.36253776435045315,
+    "ci_low": 0.22157434402332363,
+    "mean_diff": 0.30409003607754886
+  },
+  "QueryOnlyClassifier": {
+    "ci_high": 0.4,
+    "ci_low": 0.26495726495726496,
+    "mean_diff": 0.34399046765673164
+  }
+}

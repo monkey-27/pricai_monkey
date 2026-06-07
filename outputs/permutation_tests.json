@@ -1,0 +1,10 @@
+{
+  "ContractShufflePACT": {
+    "observed_diff": 0.3017241379310345,
+    "p": 0.047619047619047616
+  },
+  "QueryOnlyClassifier": {
+    "observed_diff": 0.34195402298850575,
+    "p": 0.047619047619047616
+  }
+}

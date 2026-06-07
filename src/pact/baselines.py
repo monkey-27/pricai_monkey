@@ -1,297 +1,186 @@
-"""Offline baselines for the PACT pilot."""
+"""Deterministic baselines for PACT-Causal-520."""
 
 from __future__ import annotations
 
 import math
 import re
 from collections import Counter
-from dataclasses import dataclass
 from typing import Protocol
 
-from pact.schema import Prediction, ProspectiveActionContract
+from pact.schema import InferenceEpisode, Prediction, ProspectiveActionContract
 
 TOKEN_RE = re.compile(r"[a-z0-9]+")
-
-STOPWORDS = {
-    "a",
-    "an",
-    "and",
-    "are",
-    "as",
-    "before",
-    "for",
-    "if",
-    "in",
-    "is",
-    "it",
-    "me",
-    "my",
-    "of",
-    "or",
-    "the",
-    "this",
-    "to",
-    "when",
-    "with",
-}
-
-FAMILY_HINTS: dict[str, set[str]] = {
-    "research_ideation": {"pricai", "paper", "neurips", "idea", "submission", "llm", "benchmark", "tool"},
-    "food_safety": {"food", "dessert", "thai", "potluck", "granola", "bakery", "cake", "restaurant", "takeout"},
-    "code_security": {"flask", "auth", "login", "secret", "cookie", "session", "middleware"},
-    "travel_planning": {"japan", "india", "nepal", "tokyo", "seoul", "taipei", "istanbul", "baku", "doha", "trip", "layover"},
-    "medical_caution": {"chest", "antibiotic", "rash", "headache", "medicine", "symptom", "allergic", "health"},
-    "email_rewriting": {"email", "manager", "client", "slack", "coworker", "recruiter", "rewrite", "respond"},
-    "benchmark_novelty": {"benchmark", "suite", "dataset", "tasks", "measure", "browser", "stand", "research"},
-    "scheduling": {"schedule", "meeting", "appointment", "call", "flight", "calendar", "tomorrow", "2pm"},
-    "current_facts": {"current", "latest", "today", "new", "still", "last", "night", "won", "release", "ceo", "bitcoin"},
-    "admissions_cs": {"cs", "uiuc", "berkeley", "eecs", "purdue", "college", "admissions", "major", "tech"},
-}
-
-NEAR_MISS_PATTERNS = (
-    "what is ",
-    "what does ",
-    "explain ",
-    "why do ",
-    "why does ",
-    "summarize the difference",
-    "give tips",
+STOP = {"a", "an", "and", "are", "as", "for", "if", "in", "is", "it", "me", "my", "of", "or", "the", "this", "to", "when", "with"}
+NEAR = ("what is", "what does", "explain", "define", "why do", "why use", "why avoid", "summarize", "how does", "give tips")
+ALREADY = ("already", "previous turn", "was checked", "were checked", "has been reviewed", "is done")
+CONFLICT = ("do not mention", "skip", "guarantee", "pretend", "without checking", "disable", "harmless", "same as", "prove it")
+WRONG = (
+    "fictional", "history essay", "poster", "road trip", "cron", "laptops", "phd", "poem", "railroads",
+    "hello page", "pirate", "friend", "short story", "menu", "font", "docstring", "fantasy", "diary",
+    "keyboards", "wi-fi", "phone cameras", "pride and prejudice", "liberal arts", "mba", "icon",
+    "theme of a novel", "chart title", "variables", "health-check", "side effect", "jargon",
 )
-ALREADY_PATTERNS = ("already", "just checked", "has already", "were checked", "has already been")
-CONFLICT_PATTERNS = (
-    "do not mention",
-    "make it happen",
-    "disabling",
-    "with certainty",
-    "harmless",
-    "severe",
-    "two separate meetings at 2pm",
-    "guest with a severe",
-)
-WRONG_SCOPE_HINTS = {
-    "research_ideation": {"history essay", "railroads"},
-    "food_safety": {"photo", "poster"},
-    "code_security": {"health-check", "public"},
-    "travel_planning": {"boston", "vermont", "road trip"},
-    "medical_caution": {"fictional", "scene"},
-    "email_rewriting": {"fantasy", "tavern", "archaic"},
-    "benchmark_novelty": {"laptops", "battery", "keyboard"},
-    "scheduling": {"cron", "syntax"},
-    "current_facts": {"1900"},
-    "admissions_cs": {"history phd"},
-}
-
-
-@dataclass(frozen=True)
-class EpisodeInput:
-    """Prediction-safe episode view.
-
-    It deliberately excludes labels and scoring-only keyword fields.
-    """
-
-    episode_id: str
-    history_summary: str
-    current_query: str
-
-    @property
-    def text(self) -> str:
-        return f"{self.history_summary} {self.current_query}"
 
 
 class Method(Protocol):
     name: str
 
-    def predict(
-        self, contracts: list[ProspectiveActionContract], episode: EpisodeInput
-    ) -> Prediction:
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
         ...
 
 
-def public_episode(episode: object) -> EpisodeInput:
-    return EpisodeInput(
-        episode_id=getattr(episode, "episode_id"),
-        history_summary=getattr(episode, "history_summary"),
-        current_query=getattr(episode, "current_query"),
-    )
-
-
 def tokenize(text: str) -> list[str]:
-    return [token for token in TOKEN_RE.findall(text.lower()) if token not in STOPWORDS]
+    return [tok for tok in TOKEN_RE.findall(text.lower()) if tok not in STOP]
 
 
-def text_has_any(text: str, phrases: set[str] | tuple[str, ...]) -> bool:
-    lower = text.lower()
-    return any(phrase in lower for phrase in phrases)
+def contains(text: str, phrases: tuple[str, ...]) -> bool:
+    low = text.lower()
+    return any(phrase in low for phrase in phrases)
 
 
-def overlap_score(a: str, b: str) -> float:
+def overlap(a: str, b: str) -> float:
     left, right = set(tokenize(a)), set(tokenize(b))
     if not left or not right:
         return 0.0
     return len(left & right) / math.sqrt(len(left) * len(right))
 
 
-def best_contract_by_overlap(
-    contracts: list[ProspectiveActionContract], text: str
-) -> tuple[ProspectiveActionContract, float]:
-    scored = [(contract, overlap_score(contract.raw_text, text)) for contract in contracts]
+def allowed_contracts(contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> list[ProspectiveActionContract]:
+    by_id = {c.contract_id: c for c in contracts}
+    return [by_id[cid] for cid in episode.available_contract_ids if cid in by_id] or contracts
+
+
+def best_contract(contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> tuple[ProspectiveActionContract, float]:
+    scored = [(c, max(overlap(c.raw_text, episode.text), overlap(c.cue + " " + c.guard, episode.text))) for c in allowed_contracts(contracts, episode)]
     scored.sort(key=lambda item: (item[1], item[0].contract_id), reverse=True)
     return scored[0]
 
 
-def family_hint_score(contract: ProspectiveActionContract, text: str) -> float:
-    tokens = set(tokenize(text))
-    hints = FAMILY_HINTS.get(contract.family, set())
-    if not hints:
-        return 0.0
-    return min(1.0, len(tokens & hints) / 2.0)
+def compiled_plan(contract: ProspectiveActionContract) -> str:
+    return f"Plan: {contract.action} Check: {contract.check}"
 
 
-def compiled_action(contract: ProspectiveActionContract) -> str:
-    return f"Required plan: {contract.action} Verification check: {contract.check}"
+def generic_response(contract: ProspectiveActionContract, complete: bool) -> str:
+    if complete:
+        return f"{compiled_plan(contract)} I will address the request after completing that prospective action."
+    return "I found a relevant memory and will proceed carefully, but I will not spell out the required action."
 
 
-def deterministic_response(contract: ProspectiveActionContract, prefix: str = "") -> str:
-    return (
-        f"{prefix}{compiled_action(contract)} I will handle the user's request only after "
-        f"that contracted step is addressed."
-    ).strip()
+def rough_complete(contract: ProspectiveActionContract, response: str) -> bool:
+    tokens = set(tokenize(response))
+    required = [tok for tok in tokenize(contract.action + " " + contract.check) if len(tok) > 5]
+    return len(tokens & set(required)) >= min(3, len(set(required)))
 
 
-def simple_contract_checker(contract: ProspectiveActionContract, response: str) -> bool:
-    response_tokens = set(tokenize(response))
-    action_tokens = [token for token in tokenize(contract.action) if len(token) > 4]
-    if not action_tokens:
-        return False
-    return len(response_tokens & set(action_tokens)) >= min(2, len(set(action_tokens)))
+def make_prediction(method: str, episode: InferenceEpisode, contract: ProspectiveActionContract | None,
+                    state: str, confidence: float, response: str, repaired: bool, rationale: str) -> Prediction:
+    return Prediction(
+        method=method,
+        episode_id=episode.episode_id,
+        predicted_contract_id=contract.contract_id if contract and state != "suppress" else "none",
+        predicted_state=state,
+        confidence=confidence,
+        response=response,
+        action_completed=rough_complete(contract, response) if contract and state in {"fire", "conflict"} else False,
+        repaired=repaired,
+        rationale=rationale,
+    )
 
 
-class NoMemoryBaseline:
-    name = "NoMemoryBaseline"
+class NoMemory:
+    name = "NoMemory"
 
-    def predict(self, contracts: list[ProspectiveActionContract], episode: EpisodeInput) -> Prediction:
-        return Prediction(
-            method=self.name,
-            episode_id=episode.episode_id,
-            contract_id="none",
-            predicted_state="suppress",
-            confidence=0.9,
-            response="I will answer the request in a generic way without using stored commitments.",
-            satisfied=False,
-            repaired=False,
-            rationale="No stored memory is consulted.",
-        )
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        return make_prediction(self.name, episode, None, "suppress", 0.9, "No stored prospective action is used.", False, "always suppress")
 
 
-class KeywordTriggerBaseline:
-    name = "KeywordTriggerBaseline"
+class KeywordTrigger:
+    name = "KeywordTrigger"
 
-    def __init__(self, min_overlap: int = 2) -> None:
-        self.min_overlap = min_overlap
-
-    def predict(self, contracts: list[ProspectiveActionContract], episode: EpisodeInput) -> Prediction:
-        query_tokens = set(tokenize(episode.text))
-        best = contracts[0]
-        best_count = -1
-        for contract in contracts:
-            contract_tokens = set(tokenize(f"{contract.family} {contract.cue} {contract.action}"))
-            count = len(query_tokens & contract_tokens)
-            if count > best_count:
-                best, best_count = contract, count
-        fires = best_count >= self.min_overlap
-        response = deterministic_response(best) if fires else "No trigger words are strong enough; proceeding normally."
-        return Prediction(
-            method=self.name,
-            episode_id=episode.episode_id,
-            contract_id=best.contract_id if fires else "none",
-            predicted_state="fire" if fires else "suppress",
-            confidence=min(0.95, best_count / 5.0),
-            response=response,
-            satisfied=simple_contract_checker(best, response) if fires else False,
-            repaired=False,
-            rationale=f"keyword overlap={best_count}",
-        )
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        c, score = best_contract(contracts, episode)
+        fires = score >= 0.22 and not contains(episode.text, NEAR + WRONG)
+        return make_prediction(self.name, episode, c, "fire" if fires else "suppress", score, generic_response(c, fires), False, f"keyword score={score:.3f}")
 
 
-class TfidfMemoryBaseline:
-    name = "TfidfMemoryBaseline"
+class TfidfRawMemory:
+    name = "TfidfRawMemory"
 
-    def __init__(self, threshold: float = 0.19) -> None:
-        self.threshold = threshold
-
-    def predict(self, contracts: list[ProspectiveActionContract], episode: EpisodeInput) -> Prediction:
-        contract, score = self._best(contracts, episode.text)
-        fires = score >= self.threshold
-        response = (
-            deterministic_response(contract, prefix="Retrieved memory. ")
-            if fires
-            else "Retrieved memories do not cross threshold; proceeding normally."
-        )
-        return Prediction(
-            method=self.name,
-            episode_id=episode.episode_id,
-            contract_id=contract.contract_id if fires else "none",
-            predicted_state="fire" if fires else "suppress",
-            confidence=score,
-            response=response,
-            satisfied=simple_contract_checker(contract, response) if fires else False,
-            repaired=False,
-            rationale=f"top-1 memory similarity={score:.3f}",
-        )
-
-    def _best(
-        self, contracts: list[ProspectiveActionContract], text: str
-    ) -> tuple[ProspectiveActionContract, float]:
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        pool = allowed_contracts(contracts, episode)
         try:
             from sklearn.feature_extraction.text import TfidfVectorizer
             from sklearn.metrics.pairwise import cosine_similarity
 
-            docs = [contract.raw_text for contract in contracts] + [text]
+            docs = [c.raw_text for c in pool] + [episode.text]
             matrix = TfidfVectorizer(stop_words="english").fit_transform(docs)
             sims = cosine_similarity(matrix[-1], matrix[:-1]).ravel()
             idx = int(sims.argmax())
-            return contracts[idx], float(sims[idx])
+            c, score = pool[idx], float(sims[idx])
         except Exception:
-            return best_contract_by_overlap(contracts, text)
+            c, score = best_contract(contracts, episode)
+        fires = score >= 0.18
+        return make_prediction(self.name, episode, c, "fire" if fires else "suppress", score, generic_response(c, fires), False, f"raw memory similarity={score:.3f}")
 
 
-class ContractPromptHeuristicBaseline:
-    name = "ContractPromptHeuristicBaseline"
+class FullHistory:
+    name = "FullHistory"
 
-    def predict(self, contracts: list[ProspectiveActionContract], episode: EpisodeInput) -> Prediction:
-        contract, score = best_contract_by_overlap(contracts, episode.text)
-        score = max(score, family_hint_score(contract, episode.text))
-        lower = episode.text.lower()
-        if text_has_any(lower, ALREADY_PATTERNS):
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        c, score = best_contract(contracts, episode)
+        if contains(episode.text, ALREADY):
             state = "already_satisfied"
-        elif text_has_any(lower, CONFLICT_PATTERNS):
+        elif contains(episode.text, CONFLICT):
             state = "conflict"
-        elif text_has_any(lower, NEAR_MISS_PATTERNS) or text_has_any(
-            lower, WRONG_SCOPE_HINTS.get(contract.family, set())
-        ):
+        elif contains(episode.text, NEAR + WRONG):
             state = "suppress"
         else:
-            state = "fire" if score >= 0.35 else "suppress"
-        response = deterministic_response(contract) if state in {"fire", "conflict"} else "No contracted action is needed."
-        return Prediction(
-            method=self.name,
-            episode_id=episode.episode_id,
-            contract_id=contract.contract_id if state != "suppress" else "none",
-            predicted_state=state,
-            confidence=min(0.95, score + 0.15),
-            response=response,
-            satisfied=simple_contract_checker(contract, response) if state == "fire" else False,
-            repaired=False,
-            rationale=f"heuristic contract score={score:.3f}; state={state}",
-        )
+            state = "fire" if score >= 0.24 else "suppress"
+        return make_prediction(self.name, episode, c, state, min(0.95, score + 0.2), generic_response(c, state in {"fire", "conflict"}), False, "whole-history deterministic heuristic")
 
 
-def get_baseline(name: str) -> Method:
-    lookup: dict[str, Method] = {
-        "NoMemoryBaseline": NoMemoryBaseline(),
-        "KeywordTriggerBaseline": KeywordTriggerBaseline(),
-        "TfidfMemoryBaseline": TfidfMemoryBaseline(),
-        "ContractPromptHeuristicBaseline": ContractPromptHeuristicBaseline(),
-    }
-    return lookup[name]
+class RawMemorySelfCheck:
+    name = "RawMemorySelfCheck"
 
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        c, score = best_contract(contracts, episode)
+        fires = score >= 0.20 and not contains(episode.text, NEAR + WRONG + ALREADY)
+        response = generic_response(c, complete=False)
+        if fires and not rough_complete(c, response):
+            response = response + " " + c.action
+        return make_prediction(self.name, episode, c, "fire" if fires else "suppress", score, response, fires, "raw memory plus self-check")
+
+
+class QueryOnlyClassifier:
+    name = "QueryOnlyClassifier"
+
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        text = episode.text
+        if contains(text, ALREADY):
+            state = "already_satisfied"
+        elif contains(text, CONFLICT):
+            state = "conflict"
+        elif contains(text, NEAR + WRONG):
+            state = "suppress"
+        else:
+            state = "fire" if len(set(tokenize(text)) & {"review", "plan", "help", "can", "should", "analyze", "rewrite"}) >= 1 else "suppress"
+        return make_prediction(self.name, episode, None, state, 0.55, "Query-only response without stored contract.", False, "no contract fields used")
+
+
+class LabelPermutationSanity:
+    name = "LabelPermutationSanity"
+
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        states = ["suppress", "fire", "already_satisfied", "conflict"]
+        state = states[sum(ord(ch) for ch in episode.episode_id) % len(states)]
+        c = allowed_contracts(contracts, episode)[0]
+        return make_prediction(self.name, episode, c, state, 0.25, "Deterministic permuted-label sanity response.", False, "permuted sanity")
+
+
+class LLMStub:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        c, _ = best_contract(contracts, episode)
+        return make_prediction(self.name, episode, c, "suppress", 0.0, "LLM backend disabled; no external API call was made.", False, "stub")
