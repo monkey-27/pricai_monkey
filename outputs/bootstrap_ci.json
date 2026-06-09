@@ -1,12 +1,107 @@
 {
+  "ContractCheckerOnly": {
+    "ci_high": 0.3524720893141946,
+    "ci_low": 0.23819301848049282,
+    "mean_diff": 0.30463066096264235
+  },
+  "ContractClassifierOnly": {
+    "ci_high": 0.3524720893141946,
+    "ci_low": 0.23819301848049282,
+    "mean_diff": 0.30463066096264235
+  },
+  "ContractCompilerOnly": {
+    "ci_high": 0.34415584415584416,
+    "ci_low": 0.23172905525846701,
+    "mean_diff": 0.29705808776118964
+  },
+  "ContractPromptHeuristic": {
+    "ci_high": 0.3153846153846154,
+    "ci_low": 0.21861471861471862,
+    "mean_diff": 0.2757704521032444
+  },
   "ContractShufflePACT": {
-    "ci_high": 0.36253776435045315,
-    "ci_low": 0.22157434402332363,
-    "mean_diff": 0.30409003607754886
+    "ci_high": 0.3524720893141946,
+    "ci_low": 0.23819301848049282,
+    "mean_diff": 0.30463066096264235
+  },
+  "FullHistory": {
+    "ci_high": 0.3122866894197952,
+    "ci_low": 0.21711899791231734,
+    "mean_diff": 0.2739275075296794
+  },
+  "KeywordTrigger": {
+    "ci_high": 0.3484848484848485,
+    "ci_low": 0.23208191126279865,
+    "mean_diff": 0.2990276454487392
+  },
+  "LLMContractClassifier": {
+    "ci_high": 0.3524720893141946,
+    "ci_low": 0.23819301848049282,
+    "mean_diff": 0.30463066096264235
+  },
+  "LLMContractSelfCheck": {
+    "ci_high": 0.3524720893141946,
+    "ci_low": 0.23819301848049282,
+    "mean_diff": 0.30463066096264235
+  },
+  "LLMFullHistory": {
+    "ci_high": 0.3524720893141946,
+    "ci_low": 0.23819301848049282,
+    "mean_diff": 0.30463066096264235
+  },
+  "LLMRawMemoryRAG": {
+    "ci_high": 0.3524720893141946,
+    "ci_low": 0.23819301848049282,
+    "mean_diff": 0.30463066096264235
+  },
+  "LabelPermutationSanity": {
+    "ci_high": 0.6395534290271132,
+    "ci_low": 0.5288461538461539,
+    "mean_diff": 0.5926677979896346
+  },
+  "NoMemory": {
+    "ci_high": 0.3524720893141946,
+    "ci_low": 0.23819301848049282,
+    "mean_diff": 0.30463066096264235
+  },
+  "PACT_no_checker": {
+    "ci_high": 0.33274021352313166,
+    "ci_low": 0.244122965641953,
+    "mean_diff": 0.2989115854507378
+  },
+  "PACT_no_compiler": {
+    "ci_high": 0.11904761904761904,
+    "ci_low": 0.0,
+    "mean_diff": 0.042911921929512514
+  },
+  "PACT_no_conflict_resolver": {
+    "ci_high": 0.05286343612334802,
+    "ci_low": 0.02127659574468085,
+    "mean_diff": 0.03656551102463987
+  },
+  "PACT_no_guard": {
+    "ci_high": 0.12280701754385964,
+    "ci_low": 0.05605381165919283,
+    "mean_diff": 0.0878107309874359
+  },
+  "PACT_raw_memory": {
+    "ci_high": 0.2727272727272727,
+    "ci_low": 0.1590909090909091,
+    "mean_diff": 0.21498844270393985
   },
   "QueryOnlyClassifier": {
-    "ci_high": 0.4,
-    "ci_low": 0.26495726495726496,
-    "mean_diff": 0.34399046765673164
+    "ci_high": 0.3889908256880734,
+    "ci_low": 0.2792207792207792,
+    "mean_diff": 0.34139531386047667
+  },
+  "RawMemorySelfCheck": {
+    "ci_high": 0.34415584415584416,
+    "ci_low": 0.23172905525846701,
+    "mean_diff": 0.29705808776118964
+  },
+  "TfidfRawMemory": {
+    "ci_high": 0.3766519823788546,
+    "ci_low": 0.2537878787878788,
+    "mean_diff": 0.32232469655612184
   }
 }

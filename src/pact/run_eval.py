@@ -23,7 +23,7 @@ from pact.baselines import (
 from pact.dataset import DEFAULT_DATASET, ROOT, load_contracts, load_episodes, write_dataset
 from pact.pact import METHOD_NAMES, get_method
 from pact.schema import Episode, Prediction
-from pact.scoring import binary_successes, episode_success, format_summary, group_predictions, score_method
+from pact.scoring import activated, binary_successes, episode_success, format_summary, group_predictions, score_method
 from pact.stats import cluster_bootstrap_diff, holm, mcnemar, permutation_test
 
 OUTPUT_DIR = Path(os.environ.get("PACT_OUTPUT_DIR", ROOT / "outputs"))
@@ -121,44 +121,114 @@ def write_errors(episodes: list[Episode], predictions: list[Prediction], path: P
     write_csv(path, rows)
 
 
+DIFFERENCE_METRICS = [
+    "end_to_end_success_indirect",
+    "indirect_action_completion",
+    "false_trigger_rate_including_contract_swap",
+    "wrong_contract_false_trigger_rate",
+    "conflict_detection_accuracy",
+    "conflict_safe_action_accuracy",
+    "target_action_completion_rate",
+    "irrelevant_action_completion_rate",
+]
+
+
+def strongest_contract_baseline_name(grouped: dict[str, list[Prediction]], episodes: list[Episode]) -> str:
+    names = {"ContractPromptHeuristic", "ContractClassifierOnly", "ContractCompilerOnly", "ContractCheckerOnly"}
+    candidates = [name for name in grouped if name in names]
+    if not candidates:
+        return ""
+    return max(candidates, key=lambda name: score_method(episodes, grouped[name])["end_to_end_success_indirect"])
+
+
+def write_method_differences(episodes: list[Episode], grouped: dict[str, list[Prediction]], metrics: dict[str, dict[str, float]]) -> None:
+    targets = [
+        ("strongest_ordinary", strongest_baseline_name(grouped, episodes, ordinary=True)),
+        ("strongest_contract_aware", strongest_contract_baseline_name(grouped, episodes)),
+        ("ContractCompilerOnly", "ContractCompilerOnly"),
+        ("PACT_no_checker", "PACT_no_checker"),
+        ("PACT_no_guard", "PACT_no_guard"),
+        ("PACT_raw_memory", "PACT_raw_memory"),
+        ("ContractShufflePACT", "ContractShufflePACT"),
+        ("QueryOnlyClassifier", "QueryOnlyClassifier"),
+    ]
+    rows = []
+    pact = metrics.get("PACTFull", {})
+    for label, method in targets:
+        if not method or method not in metrics:
+            continue
+        row: dict[str, object] = {"comparison": f"PACTFull_vs_{label}", "baseline_method": method}
+        for metric in DIFFERENCE_METRICS:
+            row[f"{metric}_pact"] = pact.get(metric, 0.0)
+            row[f"{metric}_baseline"] = metrics[method].get(metric, 0.0)
+            row[f"{metric}_diff"] = pact.get(metric, 0.0) - metrics[method].get(metric, 0.0)
+        rows.append(row)
+    write_csv(OUTPUT_DIR / "method_differences.csv", rows)
+
+
 def write_manual_sample(episodes: list[Episode], grouped: dict[str, list[Prediction]]) -> None:
     pact = grouped.get("PACTFull", [])
     baseline_name = strongest_baseline_name(grouped, episodes, ordinary=True)
     baseline = grouped.get(baseline_name, [])
     pact_by = {p.episode_id: p for p in pact}
     base_by = {p.episode_id: p for p in baseline}
-    chosen: list[tuple[Episode, Prediction]] = []
+    chosen: list[tuple[str, Episode, Prediction]] = []
+    pact_errors = [ep for ep in episodes if ep.episode_id in pact_by and not episode_success(ep, pact_by[ep.episode_id])]
+    swap_errors = [ep for ep in pact_errors if ep.case_type == "contract_swap"]
+    conflict_cases = [ep for ep in episodes if ep.gold_state == "conflict" and ep.episode_id in pact_by]
     successes = [ep for ep in episodes if ep.episode_id in pact_by and episode_success(ep, pact_by[ep.episode_id])][:30]
-    failures = [ep for ep in episodes if ep.episode_id in pact_by and not episode_success(ep, pact_by[ep.episode_id])][:30]
     base_fail_pact_success = [ep for ep in episodes if ep.episode_id in base_by and ep.episode_id in pact_by and not episode_success(ep, base_by[ep.episode_id]) and episode_success(ep, pact_by[ep.episode_id])][:30]
-    false_triggers = [ep for ep in episodes if ep.episode_id in pact_by and ep.gold_state == "suppress" and pact_by[ep.episode_id].predicted_state == "fire"][:50]
+    false_triggers_all = [ep for ep in episodes if ep.episode_id in pact_by and ep.gold_state == "suppress" and activated(pact_by[ep.episode_id])]
+    false_triggers = false_triggers_all if len(false_triggers_all) < 50 else false_triggers_all[:50]
     safety = [ep for ep in episodes if ep.priority_expectation == "safety" and ep.episode_id in pact_by and not episode_success(ep, pact_by[ep.episode_id])]
-    for bucket in [successes, failures, base_fail_pact_success, safety, false_triggers]:
+    buckets = [
+        ("pact_error", pact_errors),
+        ("pact_contract_swap_error", swap_errors),
+        ("pact_conflict_case", conflict_cases),
+        ("pact_success_sample", successes),
+        ("baseline_failure_pact_success", base_fail_pact_success),
+        ("safety_critical_failure", safety),
+        ("false_trigger", false_triggers),
+    ]
+    for group, bucket in buckets:
         for ep in bucket:
-            chosen.append((ep, pact_by[ep.episode_id]))
+            chosen.append((group, ep, pact_by[ep.episode_id]))
     seen = set()
     rows = []
-    for ep, pred in chosen:
-        key = (ep.episode_id, pred.method)
+    for group, ep, pred in chosen:
+        key = (group, ep.episode_id, pred.method)
         if key in seen:
             continue
         seen.add(key)
+        base = base_by.get(ep.episode_id)
         rows.append({
+            "audit_group": group,
             "episode_id": ep.episode_id,
             "family": ep.family,
             "set_type": ep.set_type,
+            "case_type": ep.case_type,
             "current_query": ep.current_query,
+            "history_summary": ep.history_summary,
             "gold_state": ep.gold_state,
+            "gold_contract_id": ep.gold_contract_id,
             "method": pred.method,
-            "prediction": pred.predicted_state,
+            "predicted_state": pred.predicted_state,
+            "predicted_contract_id": pred.predicted_contract_id,
             "response": pred.response,
+            "strongest_baseline_method": baseline_name,
+            "strongest_baseline_predicted_state": base.predicted_state if base else "",
+            "strongest_baseline_predicted_contract_id": base.predicted_contract_id if base else "",
+            "strongest_baseline_response": base.response if base else "",
             "audit_question_gold_label_valid": "",
             "audit_question_solved_for_right_reason": "",
             "audit_question_action_completion_meaningful": "",
             "audit_question_baseline_unfairly_disadvantaged": "",
-            "notes_blank": "",
+            "audit_question_wrong_contract_issue": "",
+            "audit_question_conflict_detection_vs_safe_action": "",
+            "manual_notes": "",
         })
     write_csv(OUTPUT_DIR / "manual_audit_sample.csv", rows)
+    write_csv(OUTPUT_DIR / "manual_audit_completed_template.csv", rows)
 
 
 def strongest_baseline_name(grouped: dict[str, list[Prediction]], episodes: list[Episode], *, ordinary: bool) -> str:
@@ -188,6 +258,7 @@ def run(dataset: str = DEFAULT_DATASET, methods: str = "all", split: str = "test
     write_csv(OUTPUT_DIR / "metrics_by_family.csv", metric_rows(episodes, grouped, "family"))
     write_csv(OUTPUT_DIR / "metrics_by_case_type.csv", metric_rows(episodes, grouped, "case_type"))
     write_csv(OUTPUT_DIR / "metrics_by_set_type.csv", metric_rows(episodes, grouped, "set_type"))
+    write_method_differences(episodes, grouped, metrics)
     pair_rows, boot, mc, perm = paired_outputs(episodes, grouped, bootstrap_iters, seed)
     write_csv(OUTPUT_DIR / "paired_comparisons.csv", pair_rows)
     (OUTPUT_DIR / "bootstrap_ci.json").write_text(json.dumps(boot, indent=2, sort_keys=True) + "\n", encoding="utf-8")

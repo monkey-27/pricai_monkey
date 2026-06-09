@@ -1,10 +1,86 @@
 {
+  "ContractCheckerOnly": {
+    "observed_diff": 0.3057692307692308,
+    "p": 0.000999000999000999
+  },
+  "ContractClassifierOnly": {
+    "observed_diff": 0.3057692307692308,
+    "p": 0.000999000999000999
+  },
+  "ContractCompilerOnly": {
+    "observed_diff": 0.2980769230769231,
+    "p": 0.000999000999000999
+  },
+  "ContractPromptHeuristic": {
+    "observed_diff": 0.27692307692307694,
+    "p": 0.000999000999000999
+  },
   "ContractShufflePACT": {
-    "observed_diff": 0.3017241379310345,
-    "p": 0.047619047619047616
+    "observed_diff": 0.3057692307692308,
+    "p": 0.000999000999000999
+  },
+  "FullHistory": {
+    "observed_diff": 0.275,
+    "p": 0.000999000999000999
+  },
+  "KeywordTrigger": {
+    "observed_diff": 0.3,
+    "p": 0.000999000999000999
+  },
+  "LLMContractClassifier": {
+    "observed_diff": 0.3057692307692308,
+    "p": 0.000999000999000999
+  },
+  "LLMContractSelfCheck": {
+    "observed_diff": 0.3057692307692308,
+    "p": 0.000999000999000999
+  },
+  "LLMFullHistory": {
+    "observed_diff": 0.3057692307692308,
+    "p": 0.000999000999000999
+  },
+  "LLMRawMemoryRAG": {
+    "observed_diff": 0.3057692307692308,
+    "p": 0.000999000999000999
+  },
+  "LabelPermutationSanity": {
+    "observed_diff": 0.5942307692307692,
+    "p": 0.000999000999000999
+  },
+  "NoMemory": {
+    "observed_diff": 0.3057692307692308,
+    "p": 0.000999000999000999
+  },
+  "PACT_no_checker": {
+    "observed_diff": 0.3,
+    "p": 0.000999000999000999
+  },
+  "PACT_no_compiler": {
+    "observed_diff": 0.04230769230769231,
+    "p": 0.000999000999000999
+  },
+  "PACT_no_conflict_resolver": {
+    "observed_diff": 0.03653846153846154,
+    "p": 0.000999000999000999
+  },
+  "PACT_no_guard": {
+    "observed_diff": 0.08846153846153847,
+    "p": 0.000999000999000999
+  },
+  "PACT_raw_memory": {
+    "observed_diff": 0.2153846153846154,
+    "p": 0.000999000999000999
   },
   "QueryOnlyClassifier": {
-    "observed_diff": 0.34195402298850575,
-    "p": 0.047619047619047616
+    "observed_diff": 0.3423076923076923,
+    "p": 0.000999000999000999
+  },
+  "RawMemorySelfCheck": {
+    "observed_diff": 0.2980769230769231,
+    "p": 0.000999000999000999
+  },
+  "TfidfRawMemory": {
+    "observed_diff": 0.3230769230769231,
+    "p": 0.000999000999000999
   }
 }

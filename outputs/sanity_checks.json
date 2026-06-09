@@ -1,5 +1,5 @@
 {
-  "contract_shuffle_drop": 0.3017241379310345,
-  "label_permutation_success": 0.0,
-  "query_only_success": 0.5316091954022989
+  "contract_shuffle_drop": 0.3057692307692308,
+  "label_permutation_success": 0.28846153846153844,
+  "query_only_success": 0.5403846153846154
 }

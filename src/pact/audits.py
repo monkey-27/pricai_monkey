@@ -99,15 +99,31 @@ def causality_audit(metrics: dict[str, dict[str, float]], sanity: dict[str, floa
 
 def metrics_audit(metrics: dict[str, dict[str, float]], out: Path) -> None:
     failures: list[str] = []
-    required = {"end_to_end_success", "end_to_end_success_indirect", "false_trigger_rate", "weighted_utility", "conflict_accuracy", "already_satisfied_accuracy"}
+    required = {
+        "end_to_end_success_strict",
+        "end_to_end_success_behavioral",
+        "near_miss_false_trigger_rate",
+        "wrong_scope_false_trigger_rate",
+        "wrong_contract_false_trigger_rate",
+        "false_trigger_rate_including_contract_swap",
+        "false_trigger_rate_excluding_contract_swap",
+        "conflict_detection_accuracy",
+        "conflict_safe_action_accuracy",
+        "target_action_completion_rate",
+        "irrelevant_action_completion_rate",
+        "wrong_contract_action_completion_rate",
+    }
     for method, vals in metrics.items():
         missing = required - set(vals)
         if missing:
             failures.append(f"{method} missing {sorted(missing)}")
     lines = [
         "Simulated subagent: Metric Audit Agent.",
-        "False-trigger rate denominator is gold-suppress near_miss plus wrong_scope.",
-        "Already-satisfied and conflict are scored separately.",
+        "False-trigger metrics are split into near-miss, wrong-scope, wrong-contract, excluding-contract-swap, and including-contract-swap rates.",
+        "Contract-swap false-trigger rate is reported separately because wrong-contract activations were hidden by the old aggregate.",
+        "Strict end-to-end success requires explicit conflict detection; behavioral end-to-end success allows safe conflict behavior without explicit detection.",
+        "Conflict detection and conflict-safe action are separate metrics.",
+        "Wrong-contract action completion and irrelevant action completion are reported separately from target action completion.",
         "Zero division uses deterministic 0.0 fallback.",
         "Weighted utility implements the preregistered signs and penalties.",
         f"Result: {passfail(failures)}",
@@ -174,14 +190,18 @@ def research_audit(episodes: list[Episode], grouped: dict[str, list[Prediction]]
     ci_low = bootstrap.get(strongest_non_oracle, {}).get("ci_low", 0.0) if isinstance(bootstrap.get(strongest_non_oracle, {}), dict) else 0.0
     checks = {
         "indirect_success_ge_0.75": pact.get("end_to_end_success_indirect", 0.0) >= 0.75,
-        "false_trigger_le_0.10": pact.get("false_trigger_rate", 1.0) <= 0.10,
+        "false_trigger_le_0.10": pact.get("false_trigger_rate_excluding_contract_swap", 1.0) <= 0.10,
         "gain_ge_0.20": gain >= 0.20,
         "ci_low_ge_0.10": ci_low >= 0.10,
         "checker_gain_ge_0.15": pact.get("indirect_action_completion", 0.0) - metrics.get("PACT_no_checker", {}).get("indirect_action_completion", 0.0) >= 0.15,
-        "guard_gain_ge_0.10": metrics.get("PACT_no_guard", {}).get("false_trigger_rate", 0.0) - pact.get("false_trigger_rate", 1.0) >= 0.10 or pact.get("fire_precision", 0.0) - metrics.get("PACT_no_guard", {}).get("fire_precision", 0.0) >= 0.10,
+        "guard_gain_ge_0.10": metrics.get("PACT_no_guard", {}).get("false_trigger_rate_including_contract_swap", 0.0) - pact.get("false_trigger_rate_including_contract_swap", 1.0) >= 0.10 or pact.get("fire_precision", 0.0) - metrics.get("PACT_no_guard", {}).get("fire_precision", 0.0) >= 0.10,
         "paraphrase_drop_le_0.10": pact.get("paraphrase_consistency", -1.0) >= -0.10,
         "shuffle_drop_ge_0.25": sanity.get("contract_shuffle_drop", 0.0) >= 0.25,
+        "wrong_contract_false_trigger_le_0.10": pact.get("wrong_contract_false_trigger_rate", 1.0) <= 0.10,
+        "irrelevant_action_completion_le_0.10": pact.get("irrelevant_action_completion_rate", 1.0) <= 0.10,
+        "conflict_safe_action_ge_0.75": pact.get("conflict_safe_action_accuracy", 0.0) >= 0.75,
     }
+    conflict_caveat = pact.get("conflict_detection_accuracy", 0.0) < 0.50 and pact.get("conflict_safe_action_accuracy", 0.0) >= 0.75
     failed = [name for name, ok in checks.items() if not ok]
     if not failed:
         decision = "CONTINUE_STRONG"
@@ -199,6 +219,8 @@ def research_audit(episodes: list[Episode], grouped: dict[str, list[Prediction]]
         f"PACTFull metrics: {json.dumps(pact, sort_keys=True)}.",
         f"Preregistered checks: {json.dumps(checks, sort_keys=True)}.",
         f"Triggered failures: {failed}.",
+        "Conflict caveat: PACT resolves conflicts behaviorally more than it detects them explicitly." if conflict_caveat else "Conflict caveat: not triggered.",
+        "What the stricter eval changes relative to the previous report: contract-swap false triggers, irrelevant wrong-contract actions, and conflict detection are no longer hidden inside aggregate false-trigger or end-to-end metrics.",
         f"Decision: {decision}.",
         "Next experiment: run the same causal set with a small local model-backed PAM while preserving blinded InferenceEpisode inputs.",
         f"Result: {passfail(failures)}",
