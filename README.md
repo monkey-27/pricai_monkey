@@ -91,6 +91,12 @@ PACT variants:
 - `PACT_intent_family_gate`
 - `PACT_state_action_split`
 - `PACT_R2_full`
+- `PACT_intent_plus_state`
+- `PACT_intent_plus_state_checker`
+- `PACT_intent_plus_state_family_compiler`
+- `LearnedPAM`
+- `LearnedPAM_plus_checker`
+- `LearnedPAM_plus_family_compiler`
 - `PACT_no_guard`
 - `PACT_no_checker`
 - `PACT_no_compiler`
@@ -100,6 +106,10 @@ PACT variants:
 Sanity controls:
 
 - `QueryOnlyClassifier`
+- `ContractOnlyClassifier`
+- `QueryPlusFamilyClassifier`
+- `QueryPlusContractClassifier`
+- `QueryPlusWrongContractOnly`
 - `ContractShufflePACT`
 - `LabelPermutationSanity`
 
@@ -187,6 +197,88 @@ Interpretation:
   the intervention tradeoff.
 - `manual_audit_r2_template.csv` is still a template for human review, not
   completed manual evidence.
+
+## PACT-D3
+
+PACT-D3 is a diagnostic disentanglement suite. It does not try to make the
+headline metric look better; it asks where the remaining failures come from:
+contract selection, conflict/state prediction, action compilation, completion
+scoring, deterministic PAM limits, or dataset/control leakage.
+
+D3 adds:
+
+- composition ablations, especially `PACT_intent_plus_state` and
+  `PACT_intent_plus_state_family_compiler`;
+- oracle/unfair ceiling variants, clearly marked as diagnostic only;
+- an offline deterministic `LearnedPAM` mini-probe and checker/compiler
+  variants;
+- query/contract controls that restrict which information each classifier can
+  see;
+- multi-contract retrieval stress views for contract pools of 1, 3, 6, and 12;
+- score anatomy, conflict taxonomy, naturalistic-only, and target-completion
+  mismatch exports.
+
+Run the focused D3 diagnostic suite:
+
+```bash
+python3 -m pact.run_eval \
+  --dataset pact_causal_520 \
+  --methods d3 \
+  --split test \
+  --audit
+```
+
+The ordinary all-method commands also include the D3 methods and write D3
+reports:
+
+```bash
+python3 -m pact.run_eval \
+  --dataset pact_causal_520 \
+  --methods all \
+  --split test \
+  --audit
+```
+
+D3 output files include:
+
+- `outputs/diagnostic_summary.csv`
+- `outputs/composition_ablation.csv`
+- `outputs/oracle_ceiling.csv`
+- `outputs/learned_pam_results.csv`
+- `outputs/learned_pam_feature_report.json`
+- `outputs/learned_pam_errors.csv`
+- `outputs/query_contract_controls.csv`
+- `outputs/multi_contract_stress.csv`
+- `outputs/score_anatomy.csv`
+- `outputs/score_anatomy_by_error_type.csv`
+- `outputs/score_anatomy_by_family.csv`
+- `outputs/score_anatomy_false_fire_cases.csv`
+- `outputs/conflict_taxonomy.csv`
+- `outputs/target_completion_mismatches.csv`
+- `outputs/naturalistic_metrics.csv`
+- `outputs/naturalistic_failures.csv`
+- `outputs/d3_error_transition.csv`
+- `outputs/d3_fixed_errors.csv`
+- `outputs/d3_new_errors.csv`
+- `outputs/manual_audit_d3_template.csv`
+- `outputs/audit_d3.md`
+
+Interpretation:
+
+- `diagnostic_summary.csv` is the one-table view across current PACT, R2,
+  composition variants, LearnedPAM, controls, and oracle ceilings.
+- `composition_ablation.csv` tests whether a lighter intent/state composition
+  beats full R2 or current PACT.
+- `oracle_ceiling.csv` is unfair by design; use it to diagnose bottlenecks, not
+  to claim a fair baseline win.
+- `query_contract_controls.csv` checks whether query-only or family-only
+  controls are too strong, which would threaten the contract-dependence claim.
+- `multi_contract_stress.csv` tests whether contract selection degrades as the
+  available memory pool grows.
+- `target_completion_mismatches.csv` isolates cases where state and contract
+  selection look right but target-action scoring still fails.
+- `manual_audit_d3_template.csv` is a human-audit template, not completed
+  manual evidence.
 
 ## Saved Pilot Result
 
@@ -297,6 +389,26 @@ Final evaluation writes:
 - `outputs/r2_conflict_errors.csv`
 - `outputs/r2_family_metrics.csv`
 - `outputs/manual_audit_r2_template.csv`
+- `outputs/diagnostic_summary.csv`
+- `outputs/composition_ablation.csv`
+- `outputs/oracle_ceiling.csv`
+- `outputs/learned_pam_results.csv`
+- `outputs/learned_pam_feature_report.json`
+- `outputs/learned_pam_errors.csv`
+- `outputs/query_contract_controls.csv`
+- `outputs/multi_contract_stress.csv`
+- `outputs/score_anatomy.csv`
+- `outputs/score_anatomy_by_error_type.csv`
+- `outputs/score_anatomy_by_family.csv`
+- `outputs/score_anatomy_false_fire_cases.csv`
+- `outputs/conflict_taxonomy.csv`
+- `outputs/target_completion_mismatches.csv`
+- `outputs/naturalistic_failures.csv`
+- `outputs/naturalistic_metrics.csv`
+- `outputs/d3_error_transition.csv`
+- `outputs/d3_fixed_errors.csv`
+- `outputs/d3_new_errors.csv`
+- `outputs/manual_audit_d3_template.csv`
 - `outputs/audit_dataset.md`
 - `outputs/audit_baselines.md`
 - `outputs/audit_causality.md`
@@ -305,6 +417,7 @@ Final evaluation writes:
 - `outputs/audit_research_value.md`
 - `outputs/audit_report.md`
 - `outputs/audit_r2.md`
+- `outputs/audit_d3.md`
 
 ## Preregistered Decision Rule
 
@@ -321,6 +434,20 @@ baseline, bootstrap lower bound, ablation gains, paraphrase robustness, and
 contract-shuffle degradation.
 
 Do not treat a weaker decision as final validation.
+
+The D3 diagnostic audit emits one of:
+
+- `DETERMINISTIC_PACT_READY`
+- `USE_LEARNED_PAM`
+- `FIX_COMPILER_CHECKER`
+- `FIX_CONTRACT_SELECTION`
+- `NARROW_CLAIM`
+- `KILL`
+
+The D3 decision is diagnostic. A positive deterministic decision still needs
+the caveats in `outputs/audit_d3.md`, especially naturalistic performance,
+remaining conflict failures, target-completion mismatches, and the unfinished
+manual audit template.
 
 ## Code Map
 

@@ -1,0 +1,6 @@
+method,oracle_unfair,strict_e2e,behavioral_e2e,indirect_success,conflict_detection,conflict_safe_action,target_completion,wrong_contract_false_trigger,improvement_over_PACTFull_current,improvement_over_PACT_R2_full,largest_gain_area,diagnosed_bottleneck
+OracleContractSelection,True,1.0,1.0,1.0,1.0,1.0,1.0,0.0,0.11730769230769234,0.11923076923076925,state_conflict,state and conflict prediction
+OracleState,True,1.0,1.0,1.0,1.0,1.0,1.0,0.0,0.11730769230769234,0.11923076923076925,state_conflict,state and conflict prediction
+OracleConflictState,True,0.9230769230769231,0.9230769230769231,0.8712121212121212,1.0,1.0,0.8909090909090909,0.23076923076923078,0.04038461538461546,0.04230769230769238,state_conflict,state and conflict prediction
+OracleTargetCompletion,True,0.9019230769230769,0.926923076923077,0.9015151515151515,0.6,0.9,0.8954545454545455,0.09615384615384616,0.019230769230769273,0.02115384615384619,contract_selection,wrong contract selection / applicability
+OracleCompiler,True,0.9019230769230769,0.926923076923077,0.9015151515151515,0.6,0.9,0.8954545454545455,0.09615384615384616,0.019230769230769273,0.02115384615384619,contract_selection,wrong contract selection / applicability

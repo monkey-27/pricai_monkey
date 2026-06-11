@@ -14,6 +14,11 @@
     "b10": 171,
     "p": 6.203521985032025e-34
   },
+  "ContractOnlyClassifier": {
+    "b01": 16,
+    "b10": 175,
+    "p": 5.505127773536497e-35
+  },
   "ContractPromptHeuristic": {
     "b01": 16,
     "b10": 160,
@@ -59,6 +64,21 @@
     "b10": 318,
     "p": 7.934942450185865e-82
   },
+  "LearnedPAM": {
+    "b01": 16,
+    "b10": 182,
+    "p": 7.802336169147518e-37
+  },
+  "LearnedPAM_plus_checker": {
+    "b01": 19,
+    "b10": 127,
+    "p": 8.426668768018535e-21
+  },
+  "LearnedPAM_plus_family_compiler": {
+    "b01": 28,
+    "b10": 127,
+    "p": 2.912982311238307e-16
+  },
   "NoMemory": {
     "b01": 16,
     "b10": 175,
@@ -83,6 +103,21 @@
     "b01": 10,
     "b10": 27,
     "p": 0.007632078602910042
+  },
+  "PACT_intent_plus_state": {
+    "b01": 14,
+    "b10": 10,
+    "p": 0.5412561893463135
+  },
+  "PACT_intent_plus_state_checker": {
+    "b01": 14,
+    "b10": 10,
+    "p": 0.5412561893463135
+  },
+  "PACT_intent_plus_state_family_compiler": {
+    "b01": 25,
+    "b10": 10,
+    "p": 0.01667384780012071
   },
   "PACT_no_checker": {
     "b01": 0,
@@ -123,6 +158,21 @@
     "b01": 12,
     "b10": 190,
     "p": 2.2918741614531988e-42
+  },
+  "QueryPlusContractClassifier": {
+    "b01": 14,
+    "b10": 189,
+    "p": 2.456759117953516e-40
+  },
+  "QueryPlusFamilyClassifier": {
+    "b01": 30,
+    "b10": 104,
+    "p": 9.319307580879302e-11
+  },
+  "QueryPlusWrongContractOnly": {
+    "b01": 17,
+    "b10": 133,
+    "p": 1.7309935519822622e-23
   },
   "RawMemorySelfCheck": {
     "b01": 16,

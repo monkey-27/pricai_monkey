@@ -18,6 +18,16 @@ PACT_conditional_bonus | 0.846 | 0.908 | 0.871 | 0.062 | 0.231 | 0.000
 PACT_intent_family_gate | 0.850 | 0.912 | 0.856 | 0.046 | 0.096 | 0.000
 PACT_state_action_split | 0.888 | 0.912 | 0.871 | 0.062 | 0.231 | 0.600
 PACT_R2_full | 0.881 | 0.902 | 0.856 | 0.054 | 0.096 | 0.600
+PACT_intent_plus_state | 0.890 | 0.913 | 0.856 | 0.046 | 0.096 | 0.600
+PACT_intent_plus_state_checker | 0.890 | 0.913 | 0.856 | 0.046 | 0.096 | 0.600
+PACT_intent_plus_state_family_compiler | 0.912 | 0.938 | 0.909 | 0.046 | 0.096 | 0.600
+LearnedPAM | 0.563 | 0.563 | 0.008 | 0.062 | 0.000 | 0.275
+LearnedPAM_plus_checker | 0.675 | 0.688 | 0.326 | 0.062 | 0.000 | 0.275
+LearnedPAM_plus_family_compiler | 0.692 | 0.710 | 0.364 | 0.062 | 0.000 | 0.275
+ContractOnlyClassifier | 0.577 | 0.577 | 0.000 | 0.000 | 0.000 | 0.000
+QueryPlusFamilyClassifier | 0.740 | 0.756 | 0.356 | 0.012 | 0.000 | 0.600
+QueryPlusContractClassifier | 0.546 | 0.546 | 0.000 | 0.062 | 0.000 | 0.275
+QueryPlusWrongContractOnly | 0.660 | 0.688 | 0.326 | 0.062 | 0.000 | 0.000
 PACT_no_guard | 0.794 | 0.825 | 0.894 | 0.250 | 0.346 | 0.500
 PACT_no_checker | 0.583 | 0.583 | 0.000 | 0.062 | 0.231 | 0.500
 PACT_no_compiler | 0.840 | 0.863 | 0.765 | 0.062 | 0.231 | 0.500

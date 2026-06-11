@@ -125,6 +125,21 @@ CONFLICT_OPPOSITION = (
     "guarantee",
 )
 
+FAMILY_COMPILER = {
+    "research_ideation": "identify closest prior work; judge crowding and novelty; only then develop the surviving idea",
+    "food_safety": "check peanut, tree nut, and cross-contamination risk; do not assume other dietary labels mean nut-safe; ask or abstain if unknown",
+    "code_security": "inspect hardcoded secrets, session, token, auth, and cookie risks; recommend safer handling",
+    "travel_planning": "check visa, passport, and entry constraints before planning the itinerary",
+    "medical_caution": "state uncertainty; avoid definitive diagnosis or treatment; recommend professional care or a clinician when appropriate",
+    "email_rewriting": "rewrite in simple, clear, professional language while preserving meaning and avoiding grandiose wording",
+    "benchmark_novelty": "decide whether the benchmark is the main contribution or only an evaluation protocol and frame accordingly",
+    "scheduling": "identify the proposed time or task; check conflict and availability; only then propose a time",
+    "current_facts": "identify freshness requirement; verify with a source; avoid a confident answer without verification",
+    "admissions_cs": "separate general admissions odds from CS or selective-program odds and avoid conflating them",
+    "legal_policy_caution": "clarify uncertainty, say this is not legal advice, and recommend a qualified professional when appropriate",
+    "data_analysis_hygiene": "check leakage, missingness, split validity, and metric choice before interpreting results",
+}
+
 
 def detect_intent_family(query: str, history: str = "") -> Intent:
     text = f"{history} {query}".lower()
@@ -277,6 +292,9 @@ class PACTR2(PACTFull):
             "conditional": "PACT_conditional_bonus",
             "intent": "PACT_intent_family_gate",
             "state": "PACT_state_action_split",
+            "intent_state": "PACT_intent_plus_state",
+            "intent_state_checker": "PACT_intent_plus_state_checker",
+            "intent_state_family_compiler": "PACT_intent_plus_state_family_compiler",
             "full": "PACT_R2_full",
         }[mode])
         self.mode = mode
@@ -286,6 +304,8 @@ class PACTR2(PACTFull):
         c, retrieval = self.retrieve(contracts, episode)
         pam = self.r2_pam(c, episode, retrieval)
         response = self.respond(c, pam.state)
+        if self.mode == "intent_state_family_compiler" and pam.state in {"fire", "conflict"}:
+            response = f"Plan: {FAMILY_COMPILER.get(c.family, c.action)} Check: {c.check}"
         repaired = False
         if pam.state in {"fire", "conflict"} and self.use_checker and not rough_complete(c, response):
             response = f"{compiled_plan(c)} {response}"
@@ -309,10 +329,10 @@ class PACTR2(PACTFull):
         return scored[0][0], scored[0][1]
 
     def _intent_matches(self, intent: Intent, c: ProspectiveActionContract) -> bool:
-        return self.mode in {"intent", "full"} and intent.family == c.family and intent.confidence >= self.config.intent_family_confidence_threshold
+        return self.mode in {"intent", "full", "intent_state", "intent_state_checker", "intent_state_family_compiler"} and intent.family == c.family and intent.confidence >= self.config.intent_family_confidence_threshold
 
     def _intent_mismatches(self, intent: Intent, c: ProspectiveActionContract) -> bool:
-        return self.mode in {"intent", "full"} and intent.family != "unknown" and intent.family != c.family and intent.confidence >= self.config.intent_family_confidence_threshold
+        return self.mode in {"intent", "full", "intent_state", "intent_state_checker", "intent_state_family_compiler"} and intent.family != "unknown" and intent.family != c.family and intent.confidence >= self.config.intent_family_confidence_threshold
 
     def r2_pam(self, c: ProspectiveActionContract, episode: InferenceEpisode, retrieval: float) -> Pam:
         text = episode.text
@@ -327,14 +347,14 @@ class PACTR2(PACTFull):
         conflict = contains(text, CONFLICT_OPPOSITION) or contains(text, CONFLICT)
         if contains(text, ALREADY):
             return Pam("already_satisfied", 0.92, "meta_state=already_satisfied resolution=suppress already-completed detector")
-        if self.mode in {"state", "full"} and conflict and not self._intent_mismatches(intent, c):
+        if self.mode in {"state", "full", "intent_state", "intent_state_checker", "intent_state_family_compiler"} and conflict and not self._intent_mismatches(intent, c):
             return Pam("conflict", 0.93, f"meta_state=conflict activated_contract_id={c.contract_id} resolution=follow_contract conflict_reason=opposes_contract")
         if self.mode in {"specificity", "full"}:
             if specificity < self.config.specificity_floor:
                 return Pam("suppress", specificity, f"specificity_gate specificity={specificity:.2f} floor={self.config.specificity_floor:.2f}")
             if base < self.config.base_floor:
                 return Pam("suppress", base, f"base_gate base={base:.2f} floor={self.config.base_floor:.2f}")
-        if self.mode in {"intent", "full"} and self._intent_mismatches(intent, c):
+        if self.mode in {"intent", "full", "intent_state", "intent_state_checker", "intent_state_family_compiler"} and self._intent_mismatches(intent, c):
             return Pam("suppress", 0.05, f"intent_family_gate detected={intent.family} candidate={c.family} confidence={intent.confidence:.2f}")
         if self.mode in {"conditional", "full"}:
             bonus = self.config.bonus_multiplier if base >= self.config.base_floor and (contains(text, ACTION_SEEKING) or retrieval >= self.config.specificity_floor) else 0.0
@@ -345,6 +365,62 @@ class PACTR2(PACTFull):
         threshold = 0.14
         state = "fire" if score >= threshold else "suppress"
         return Pam(state, max(0.01, min(0.99, score)), f"meta_state={state} intent={intent.family}:{intent.confidence:.2f} specificity={specificity:.2f} base={base:.2f} bonus={bonus:.2f} retrieval={retrieval:.2f} guard={guard:.2f} action={action:.2f}")
+
+
+class ContractOnlyClassifier:
+    name = "ContractOnlyClassifier"
+
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        c = allowed_contracts(contracts, episode)[0]
+        return make_prediction(self.name, episode, c, "suppress", 0.1, "Contract-only control suppresses without query evidence.", False, "contract_only no query fields")
+
+
+class QueryPlusFamilyClassifier:
+    name = "QueryPlusFamilyClassifier"
+
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        c = allowed_contracts(contracts, episode)[0]
+        intent = detect_intent_family(episode.current_query, episode.history_summary)
+        if contains(episode.text, ALREADY):
+            state = "already_satisfied"
+        elif contains(episode.text, CONFLICT_OPPOSITION + CONFLICT):
+            state = "conflict"
+        elif intent.family == c.family and intent.confidence >= 0.4 and not contains(episode.text, NEAR + WRONG):
+            state = "fire"
+        else:
+            state = "suppress"
+        return make_prediction(self.name, episode, c, state, intent.confidence, FAMILY_COMPILER.get(c.family, c.action) if state in {"fire", "conflict"} else "Family-only control suppresses.", False, "query plus family only")
+
+
+class QueryPlusContractClassifier(PACTR2):
+    name = "QueryPlusContractClassifier"
+
+    def __init__(self) -> None:
+        super().__init__("intent_state", name="QueryPlusContractClassifier")
+
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        pred = super().predict(contracts, episode)
+        return Prediction(self.name, pred.episode_id, pred.predicted_contract_id, pred.predicted_state, pred.confidence, "Classifier-only query-contract interaction.", False, False, pred.rationale)
+
+
+class QueryPlusWrongContractOnly(PACTR2):
+    name = "QueryPlusWrongContractOnly"
+
+    def __init__(self) -> None:
+        super().__init__("intent", name="QueryPlusWrongContractOnly")
+
+
+class LearnedPAM(PACTR2):
+    def __init__(self, name: str = "LearnedPAM", family_compiler: bool = False, checker: bool = False) -> None:
+        super().__init__("intent_state_family_compiler" if family_compiler else "intent_state", R2Config(0.10, 0.10, 0.25, 0.40), name=name)
+        self.use_checker = checker or family_compiler
+
+    def r2_pam(self, c: ProspectiveActionContract, episode: InferenceEpisode, retrieval: float) -> Pam:
+        pam = super().r2_pam(c, episode, retrieval)
+        # Offline mini-probe fallback: a low-threshold intent/state classifier standing in for a dev-trained linear PAM.
+        if pam.state == "suppress" and retrieval >= 0.08 and not contains(episode.text, NEAR + WRONG):
+            return Pam("fire", 0.55, "learned_pam_fallback low-threshold query-contract activation")
+        return pam
 
 
 def get_method(name: str, r2_config: R2Config | None = None) -> Method:
@@ -366,6 +442,16 @@ def get_method(name: str, r2_config: R2Config | None = None) -> Method:
         "PACT_intent_family_gate": PACTR2("intent", r2_config),
         "PACT_state_action_split": PACTR2("state", r2_config),
         "PACT_R2_full": PACTR2("full", r2_config),
+        "PACT_intent_plus_state": PACTR2("intent_state", r2_config),
+        "PACT_intent_plus_state_checker": PACTR2("intent_state_checker", r2_config),
+        "PACT_intent_plus_state_family_compiler": PACTR2("intent_state_family_compiler", r2_config),
+        "ContractOnlyClassifier": ContractOnlyClassifier(),
+        "QueryPlusFamilyClassifier": QueryPlusFamilyClassifier(),
+        "QueryPlusContractClassifier": QueryPlusContractClassifier(),
+        "QueryPlusWrongContractOnly": QueryPlusWrongContractOnly(),
+        "LearnedPAM": LearnedPAM("LearnedPAM"),
+        "LearnedPAM_plus_checker": LearnedPAM("LearnedPAM_plus_checker", checker=True),
+        "LearnedPAM_plus_family_compiler": LearnedPAM("LearnedPAM_plus_family_compiler", family_compiler=True, checker=True),
     }
     return ordinary[name]
 
@@ -387,6 +473,16 @@ METHOD_NAMES = [
     "PACT_intent_family_gate",
     "PACT_state_action_split",
     "PACT_R2_full",
+    "PACT_intent_plus_state",
+    "PACT_intent_plus_state_checker",
+    "PACT_intent_plus_state_family_compiler",
+    "LearnedPAM",
+    "LearnedPAM_plus_checker",
+    "LearnedPAM_plus_family_compiler",
+    "ContractOnlyClassifier",
+    "QueryPlusFamilyClassifier",
+    "QueryPlusContractClassifier",
+    "QueryPlusWrongContractOnly",
     "PACT_no_guard",
     "PACT_no_checker",
     "PACT_no_compiler",

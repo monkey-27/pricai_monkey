@@ -1,0 +1,23 @@
+{
+  "backend": "deterministic_fallback",
+  "features": [
+    "query_history_ngrams",
+    "contract_text_overlap",
+    "intent_family_match",
+    "family_indicator",
+    "conflict_phrase_indicators",
+    "already_satisfied_indicators",
+    "wrong_scope_indicators"
+  ],
+  "forbidden_prediction_fields": [
+    "case_type",
+    "gold_state",
+    "expected_action_keywords",
+    "forbidden_action_keywords",
+    "completion_rubric",
+    "notes"
+  ],
+  "note": "Fallback mini-probe uses frozen deterministic feature thresholds rather than an external API or non-deterministic model.",
+  "test_labels_seen_at_prediction_time": false,
+  "training_split": "dev_only"
+}

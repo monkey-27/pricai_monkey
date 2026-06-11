@@ -1,0 +1,6 @@
+method,indirect_strict_success,wrong_contract_false_trigger_rate,conflict_detection_accuracy,conflict_safe_action_accuracy,target_completion,strict_e2e,behavioral_e2e,naturalistic_strict_success,contract_shuffle_drop,fixed_vs_current,regressed_vs_current,validity_flag
+QueryOnlyClassifier,0.0,0.36538461538461536,0.5,0.0,0.0,0.5403846153846154,0.5403846153846154,0.55,,12,190,
+ContractOnlyClassifier,0.0,0.0,0.0,0.0,0.0,0.5769230769230769,0.5769230769230769,0.6,,16,175,
+QueryPlusFamilyClassifier,0.3484848484848485,0.0,0.6,0.8,0.4409090909090909,0.7403846153846154,0.7557692307692307,0.775,,30,104,
+QueryPlusContractClassifier,0.0,0.0,0.275,0.0,0.0,0.5461538461538461,0.5461538461538461,0.5,,14,189,
+QueryPlusWrongContractOnly,0.32575757575757575,0.0,0.0,0.375,0.33636363636363636,0.6596153846153846,0.6884615384615385,0.625,,17,133,

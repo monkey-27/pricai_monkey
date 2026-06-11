@@ -1,0 +1,4 @@
+method,indirect_strict_success,wrong_contract_false_trigger_rate,conflict_detection_accuracy,conflict_safe_action_accuracy,target_completion,strict_e2e,behavioral_e2e,naturalistic_strict_success,contract_shuffle_drop,fixed_vs_current,regressed_vs_current
+LearnedPAM,0.0,0.0,0.275,0.225,0.045454545454545456,0.5634615384615385,0.5634615384615385,0.525,,16,182
+LearnedPAM_plus_checker,0.3181818181818182,0.0,0.275,0.4,0.3409090909090909,0.675,0.6884615384615385,0.65,,19,127
+LearnedPAM_plus_family_compiler,0.3560606060606061,0.0,0.275,0.475,0.39090909090909093,0.6923076923076923,0.7096153846153846,0.675,,28,127

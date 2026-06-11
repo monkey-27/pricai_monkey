@@ -11,6 +11,10 @@
     "observed_diff": 0.2980769230769231,
     "p": 0.000999000999000999
   },
+  "ContractOnlyClassifier": {
+    "observed_diff": 0.3057692307692308,
+    "p": 0.000999000999000999
+  },
   "ContractPromptHeuristic": {
     "observed_diff": 0.27692307692307694,
     "p": 0.000999000999000999
@@ -47,6 +51,18 @@
     "observed_diff": 0.5942307692307692,
     "p": 0.000999000999000999
   },
+  "LearnedPAM": {
+    "observed_diff": 0.3192307692307692,
+    "p": 0.000999000999000999
+  },
+  "LearnedPAM_plus_checker": {
+    "observed_diff": 0.2076923076923077,
+    "p": 0.000999000999000999
+  },
+  "LearnedPAM_plus_family_compiler": {
+    "observed_diff": 0.19038461538461537,
+    "p": 0.000999000999000999
+  },
   "NoMemory": {
     "observed_diff": 0.3057692307692308,
     "p": 0.000999000999000999
@@ -66,6 +82,18 @@
   "PACT_intent_family_gate": {
     "observed_diff": 0.032692307692307694,
     "p": 0.011988011988011988
+  },
+  "PACT_intent_plus_state": {
+    "observed_diff": -0.007692307692307693,
+    "p": 0.5234765234765235
+  },
+  "PACT_intent_plus_state_checker": {
+    "observed_diff": -0.007692307692307693,
+    "p": 0.5234765234765235
+  },
+  "PACT_intent_plus_state_family_compiler": {
+    "observed_diff": -0.028846153846153848,
+    "p": 0.024975024975024976
   },
   "PACT_no_checker": {
     "observed_diff": 0.3,
@@ -97,6 +125,18 @@
   },
   "QueryOnlyClassifier": {
     "observed_diff": 0.3423076923076923,
+    "p": 0.000999000999000999
+  },
+  "QueryPlusContractClassifier": {
+    "observed_diff": 0.33653846153846156,
+    "p": 0.000999000999000999
+  },
+  "QueryPlusFamilyClassifier": {
+    "observed_diff": 0.1423076923076923,
+    "p": 0.000999000999000999
+  },
+  "QueryPlusWrongContractOnly": {
+    "observed_diff": 0.2230769230769231,
     "p": 0.000999000999000999
   },
   "RawMemorySelfCheck": {

@@ -14,6 +14,11 @@
     "ci_low": 0.23172905525846701,
     "mean_diff": 0.29705808776118964
   },
+  "ContractOnlyClassifier": {
+    "ci_high": 0.3524720893141946,
+    "ci_low": 0.23819301848049282,
+    "mean_diff": 0.30463066096264235
+  },
   "ContractPromptHeuristic": {
     "ci_high": 0.3153846153846154,
     "ci_low": 0.21861471861471862,
@@ -59,6 +64,21 @@
     "ci_low": 0.5288461538461539,
     "mean_diff": 0.5926677979896346
   },
+  "LearnedPAM": {
+    "ci_high": 0.36796536796536794,
+    "ci_low": 0.25384615384615383,
+    "mean_diff": 0.31788833051072135
+  },
+  "LearnedPAM_plus_checker": {
+    "ci_high": 0.2751540041067762,
+    "ci_low": 0.1414141414141414,
+    "mean_diff": 0.20845119772543075
+  },
+  "LearnedPAM_plus_family_compiler": {
+    "ci_high": 0.2727272727272727,
+    "ci_low": 0.09523809523809523,
+    "mean_diff": 0.1905146936634089
+  },
   "NoMemory": {
     "ci_high": 0.3524720893141946,
     "ci_low": 0.23819301848049282,
@@ -83,6 +103,21 @@
     "ci_high": 0.06493506493506493,
     "ci_low": 0.0016835016835016834,
     "mean_diff": 0.03317796247296203
+  },
+  "PACT_intent_plus_state": {
+    "ci_high": 0.012320328542094456,
+    "ci_low": -0.025597269624573378,
+    "mean_diff": -0.0074242741210601496
+  },
+  "PACT_intent_plus_state_checker": {
+    "ci_high": 0.012320328542094456,
+    "ci_low": -0.025597269624573378,
+    "mean_diff": -0.0074242741210601496
+  },
+  "PACT_intent_plus_state_family_compiler": {
+    "ci_high": 0.004662004662004662,
+    "ci_low": -0.07597535934291581,
+    "mean_diff": -0.029346667974642394
   },
   "PACT_no_checker": {
     "ci_high": 0.33274021352313166,
@@ -123,6 +158,21 @@
     "ci_high": 0.3889908256880734,
     "ci_low": 0.2792207792207792,
     "mean_diff": 0.34139531386047667
+  },
+  "QueryPlusContractClassifier": {
+    "ci_high": 0.388671875,
+    "ci_low": 0.2669404517453799,
+    "mean_diff": 0.33502857165518785
+  },
+  "QueryPlusFamilyClassifier": {
+    "ci_high": 0.20833333333333334,
+    "ci_low": 0.05827505827505827,
+    "mean_diff": 0.14241970358101316
+  },
+  "QueryPlusWrongContractOnly": {
+    "ci_high": 0.28952772073921973,
+    "ci_low": 0.15757575757575756,
+    "mean_diff": 0.22373971823800937
   },
   "RawMemorySelfCheck": {
     "ci_high": 0.34415584415584416,
