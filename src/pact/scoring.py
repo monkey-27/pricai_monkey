@@ -101,6 +101,7 @@ def score_method(episodes: list[Episode], predictions: list[Prediction]) -> dict
     repaired = repaired_done = unrepaired = unrepaired_done = 0
     swap_total = swap_success = 0
     para_total = para_success = controlled_total = controlled_success = 0
+    naturalistic_total = naturalistic_success = scheduling_total = scheduling_success = 0
     e2e = []
     e2e_behavioral = []
     family_scores: dict[str, list[float]] = defaultdict(list)
@@ -181,6 +182,12 @@ def score_method(episodes: list[Episode], predictions: list[Prediction]) -> dict
         if ep.set_type == "controlled":
             controlled_total += 1
             controlled_success += int(success)
+        if ep.set_type == "naturalistic":
+            naturalistic_total += 1
+            naturalistic_success += int(success)
+        if ep.family == "scheduling":
+            scheduling_total += 1
+            scheduling_success += int(success)
     precision = div(fire_tp, fire_tp + fire_fp)
     recall = div(fire_tp, fire_tp + fire_fn)
     family_means = [sum(vals) / len(vals) for vals in family_scores.values()]
@@ -216,8 +223,11 @@ def score_method(episodes: list[Episode], predictions: list[Prediction]) -> dict
         "end_to_end_success_strict": div(sum(e2e), len(e2e)),
         "end_to_end_success_behavioral": div(sum(e2e_behavioral), len(e2e_behavioral)),
         "end_to_end_success_indirect": div(indirect_success, indirect),
+        "indirect_end_to_end_success_strict": div(indirect_success, indirect),
         "end_to_end_success_near_miss": _case_success(episodes, by_id, "near_miss"),
         "end_to_end_success_wrong_scope": _case_success(episodes, by_id, "wrong_scope"),
+        "naturalistic_success": div(naturalistic_success, naturalistic_total),
+        "scheduling_family_success": div(scheduling_success, scheduling_total),
         "weighted_utility": div(total_utility, len(episodes)),
     }
 

@@ -2,7 +2,7 @@ from pact.run_eval import OUTPUT_DIR, run
 
 
 def test_required_output_files_created():
-    run(dataset="pact_causal_520", methods="PACTFull,QueryOnlyClassifier,ContractShufflePACT", split="test", audit=True, bootstrap_iters=20)
+    run(dataset="pact_causal_520", methods="r2", split="test", audit=True, bootstrap_iters=20)
     for name in [
         "predictions.csv",
         "metrics_main.json",
@@ -19,6 +19,17 @@ def test_required_output_files_created():
         "manual_audit_sample.csv",
         "manual_audit_completed_template.csv",
         "method_differences.csv",
+        "r2_variant_metrics.csv",
+        "r2_threshold_search.csv",
+        "r2_best_config.json",
+        "r2_error_transition.csv",
+        "r2_fixed_errors.csv",
+        "r2_new_errors.csv",
+        "r2_contract_swap_errors.csv",
+        "r2_conflict_errors.csv",
+        "r2_family_metrics.csv",
+        "manual_audit_r2_template.csv",
+        "audit_r2.md",
         "audit_dataset.md",
         "audit_baselines.md",
         "audit_causality.md",

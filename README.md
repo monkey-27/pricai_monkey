@@ -85,6 +85,12 @@ Contract-aware baselines:
 PACT variants:
 
 - `PACTFull`
+- `PACTFull_current`
+- `PACT_specificity_gate`
+- `PACT_conditional_bonus`
+- `PACT_intent_family_gate`
+- `PACT_state_action_split`
+- `PACT_R2_full`
 - `PACT_no_guard`
 - `PACT_no_checker`
 - `PACT_no_compiler`
@@ -104,7 +110,9 @@ triggers. Key metrics include:
 
 - `end_to_end_success_indirect`
 - `indirect_action_completion`
-- `false_trigger_rate`
+- `false_trigger_rate_excluding_contract_swap`
+- `false_trigger_rate_including_contract_swap`
+- `wrong_contract_false_trigger_rate`
 - `fire_precision`
 - `paraphrase_consistency`
 - `contract_shuffle_drop`
@@ -116,11 +124,78 @@ scoring-only fields.
 
 ## Saved Pilot Result
 
+The strict eval repair showed why aggregate false-trigger metrics were too
+flattering: ordinary near-miss and wrong-scope false fires were low, but
+contract-swap cases exposed wrong-contract activations. That is why reports now
+separate ordinary false triggers from wrong-contract false triggers and strict
+success from behavioral success.
+
+The saved run in `outputs/` reports the latest all-split evaluation. Before
+R2, `PACTFull_current` had strong indirect completion but a nontrivial
+wrong-contract false-trigger rate. PACT-R2 tests whether that weakness is a
+mechanism bug rather than a fundamental flaw.
+
+## PACT-R2
+
+PACT-R2 is a calibrated applicability intervention. It does not change the
+dataset. It adds:
+
+- a specificity gate, so weakly matched contracts cannot fire because of a
+  generic action bonus;
+- a conditional bonus, so bonuses amplify plausible contracts instead of
+  creating activations from nothing;
+- an intent-family gate, so a likely user intent family can suppress mismatched
+  contracts;
+- a state/action split, so explicit conflict detection is separated from safe
+  action execution.
+
+R2 thresholds are tuned on the dev split only. The search writes:
+
+- `outputs/r2_threshold_search.csv`
+- `outputs/r2_best_config.json`
+
+The saved config is then reused unchanged for test/all reporting.
+
+Run the focused R2 comparison:
+
+```bash
+python3 -m pact.run_eval \
+  --dataset pact_causal_520 \
+  --methods r2 \
+  --split test \
+  --audit
+```
+
+R2 output files include:
+
+- `outputs/r2_variant_metrics.csv`
+- `outputs/r2_error_transition.csv`
+- `outputs/r2_fixed_errors.csv`
+- `outputs/r2_new_errors.csv`
+- `outputs/r2_contract_swap_errors.csv`
+- `outputs/r2_conflict_errors.csv`
+- `outputs/r2_family_metrics.csv`
+- `outputs/manual_audit_r2_template.csv`
+- `outputs/audit_r2.md`
+
+Interpretation:
+
+- `r2_variant_metrics.csv` compares all R2 variants on primary R2 metrics.
+- `r2_error_transition.csv` shows every current-vs-R2 changed episode and
+  labels it as fixed, regressed, unchanged-correct, or unchanged-wrong.
+- `r2_fixed_errors.csv` and `r2_new_errors.csv` are the fastest way to inspect
+  the intervention tradeoff.
+- `manual_audit_r2_template.csv` is still a template for human review, not
+  completed manual evidence.
+
+## Saved Pilot Result
+
 The saved run in `outputs/` reports:
 
 | Method | End-to-end success | Indirect success | Indirect action completion | False trigger rate |
 |---|---:|---:|---:|---:|
-| `PACTFull` | 0.874 | 0.877 | 0.877 | 0.008 |
+| `PACTFull_current` | see `metrics_main.json` | see `metrics_main.json` | see `metrics_main.json` | see strict split metrics |
+| `PACT_R2_full` | see `metrics_main.json` | see `metrics_main.json` | see `metrics_main.json` | see strict split metrics |
 | `QueryOnlyClassifier` | 0.532 | 0.000 | 0.000 | 0.000 |
 | `ContractShufflePACT` | 0.572 | 0.000 | 0.000 | 0.000 |
 
@@ -128,8 +203,9 @@ The research-value audit decision is `CONTINUE_WEAK`.
 
 Interpretation:
 
-- PACTFull substantially improves indirect action completion while keeping
-  false triggers low in this deterministic pilot.
+- PACT variants substantially improve indirect action completion, but strict
+  interpretation depends on wrong-contract false-trigger control and conflict
+  detection, not just ordinary near-miss suppression.
 - The contract-shuffle sanity check degrades performance, which supports that
   the model is using contract identity rather than only query priors.
 - The preregistered strong decision did not pass because the bootstrap lower
@@ -209,6 +285,18 @@ Final evaluation writes:
 - `outputs/errors_pact.csv`
 - `outputs/errors_strongest_baseline.csv`
 - `outputs/manual_audit_sample.csv`
+- `outputs/manual_audit_completed_template.csv`
+- `outputs/method_differences.csv`
+- `outputs/r2_variant_metrics.csv`
+- `outputs/r2_threshold_search.csv`
+- `outputs/r2_best_config.json`
+- `outputs/r2_error_transition.csv`
+- `outputs/r2_fixed_errors.csv`
+- `outputs/r2_new_errors.csv`
+- `outputs/r2_contract_swap_errors.csv`
+- `outputs/r2_conflict_errors.csv`
+- `outputs/r2_family_metrics.csv`
+- `outputs/manual_audit_r2_template.csv`
 - `outputs/audit_dataset.md`
 - `outputs/audit_baselines.md`
 - `outputs/audit_causality.md`
@@ -216,6 +304,7 @@ Final evaluation writes:
 - `outputs/audit_reproducibility.md`
 - `outputs/audit_research_value.md`
 - `outputs/audit_report.md`
+- `outputs/audit_r2.md`
 
 ## Preregistered Decision Rule
 
@@ -258,4 +347,3 @@ tests/                   regression tests for dataset, scoring, and outputs
   settled.
 - The next natural experiment is a small model-backed PACT/agent run while
   preserving the blinded `InferenceEpisode` input boundary.
-

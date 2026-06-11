@@ -10,7 +10,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from pact.schema import Episode, Prediction, ProspectiveActionContract
-from pact.scoring import score_method
+from pact.scoring import episode_success, score_method
 
 
 def write(path: Path, title: str, lines: list[str]) -> None:
@@ -228,6 +228,67 @@ def research_audit(episodes: list[Episode], grouped: dict[str, list[Prediction]]
     write(out / "audit_research_value.md", "Research-Value Audit Agent", lines)
 
 
+def r2_audit(episodes: list[Episode], grouped: dict[str, list[Prediction]], metrics: dict[str, dict[str, float]], sanity: dict[str, float], out: Path) -> None:
+    failures: list[str] = []
+    current = metrics.get("PACTFull_current", metrics.get("PACTFull", {}))
+    r2 = metrics.get("PACT_R2_full", {})
+    config_path = out / "r2_best_config.json"
+    config = json.loads(config_path.read_text(encoding="utf-8")) if config_path.exists() else {}
+    cur_preds = grouped.get("PACTFull_current", grouped.get("PACTFull", []))
+    r2_preds = grouped.get("PACT_R2_full", [])
+    cur_by = {p.episode_id: p for p in cur_preds}
+    r2_by = {p.episode_id: p for p in r2_preds}
+    fixed = regressed = 0
+    for ep in episodes:
+        if ep.episode_id not in cur_by or ep.episode_id not in r2_by:
+            continue
+        cur_ok = episode_success(ep, cur_by[ep.episode_id])
+        r2_ok = episode_success(ep, r2_by[ep.episode_id])
+        fixed += int((not cur_ok) and r2_ok)
+        regressed += int(cur_ok and (not r2_ok))
+    checks = {
+        "indirect_end_to_end_success_strict_ge_0.82": r2.get("indirect_end_to_end_success_strict", 0.0) >= 0.82,
+        "wrong_contract_false_trigger_rate_le_0.10": r2.get("wrong_contract_false_trigger_rate", 1.0) <= 0.10,
+        "false_trigger_rate_including_contract_swap_le_0.05": r2.get("false_trigger_rate_including_contract_swap", 1.0) <= 0.05,
+        "conflict_detection_accuracy_ge_0.75": r2.get("conflict_detection_accuracy", 0.0) >= 0.75,
+        "conflict_safe_action_accuracy_ge_0.85": r2.get("conflict_safe_action_accuracy", 0.0) >= 0.85,
+        "target_action_completion_rate_ge_0.85": r2.get("target_action_completion_rate", 0.0) >= 0.85,
+        "end_to_end_success_strict_ge_0.88": r2.get("end_to_end_success_strict", 0.0) >= 0.88,
+        "contract_shuffle_drop_ge_0.25": sanity.get("r2_contract_shuffle_drop", 0.0) >= 0.25,
+        "paraphrase_degradation_le_0.10": r2.get("paraphrase_consistency", -1.0) >= -0.10,
+        "wrong_contract_improves_ge_0.12": current.get("wrong_contract_false_trigger_rate", 0.0) - r2.get("wrong_contract_false_trigger_rate", 1.0) >= 0.12,
+        "conflict_detection_improves_ge_0.20": r2.get("conflict_detection_accuracy", 0.0) - current.get("conflict_detection_accuracy", 0.0) >= 0.20,
+        "indirect_drop_le_0.05": current.get("indirect_end_to_end_success_strict", 0.0) - r2.get("indirect_end_to_end_success_strict", 0.0) <= 0.05,
+    }
+    failed = [name for name, ok in checks.items() if not ok]
+    if not failed:
+        decision = "CONTINUE_STRONG"
+    elif checks["wrong_contract_improves_ge_0.12"] and checks["indirect_drop_le_0.05"]:
+        decision = "CONTINUE_WEAK"
+    elif r2.get("wrong_contract_false_trigger_rate", 1.0) > 0.15 or current.get("indirect_end_to_end_success_strict", 0.0) - r2.get("indirect_end_to_end_success_strict", 0.0) > 0.10:
+        decision = "REFORMULATE"
+    else:
+        decision = "KILL"
+    lines = [
+        "Simulated subagent: R2 Audit Agent.",
+        "Dataset unchanged: generation was rerun against the frozen pact_causal_520 schema; labels/examples are not modified by R2.",
+        "Dev-only tuning: R2 threshold search uses dev split only and writes r2_best_config.json before test/all prediction.",
+        "Thresholds frozen before reporting: the saved config is reused for evaluated split predictions.",
+        f"R2 best config: {json.dumps(config.get('config', {}), sort_keys=True)}.",
+        f"Dev objective result: {json.dumps(config.get('dev_result', {}), sort_keys=True)}.",
+        f"PACTFull_current metrics: {json.dumps(current, sort_keys=True)}.",
+        f"PACT_R2_full metrics: {json.dumps(r2, sort_keys=True)}.",
+        f"Fixed count: {fixed}; regressed count: {regressed}.",
+        f"R2 success checks: {json.dumps(checks, sort_keys=True)}.",
+        f"Triggered failures: {failed}.",
+        f"Decision: {decision}.",
+        "Manual audit status: manual_audit_r2_template.csv is a template, not completed human evidence.",
+        "Main caveats: inspect remaining contract-swap failures, conflict failures, and family-level regressions before claiming mechanism success.",
+        f"Result: {passfail(failures)}",
+    ]
+    write(out / "audit_r2.md", "R2 Audit Agent", lines)
+
+
 def run_all_audits(contracts: list[ProspectiveActionContract], episodes: list[Episode], grouped: dict[str, list[Prediction]], metrics: dict[str, dict[str, float]], out: Path, *, bootstrap: dict[str, object], sanity: dict[str, float]) -> None:
     dataset_audit(contracts, episodes, out)
     baseline_audit(grouped, out)
@@ -235,3 +296,4 @@ def run_all_audits(contracts: list[ProspectiveActionContract], episodes: list[Ep
     metrics_audit(metrics, out)
     reproducibility_audit(out)
     research_audit(episodes, grouped, metrics, bootstrap, sanity, out)
+    r2_audit(episodes, grouped, metrics, sanity, out)

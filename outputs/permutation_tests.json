@@ -51,6 +51,22 @@
     "observed_diff": 0.3057692307692308,
     "p": 0.000999000999000999
   },
+  "PACTFull_current": {
+    "observed_diff": 0.0,
+    "p": 1.0
+  },
+  "PACT_R2_full": {
+    "observed_diff": 0.0019230769230769232,
+    "p": 1.0
+  },
+  "PACT_conditional_bonus": {
+    "observed_diff": 0.03653846153846154,
+    "p": 0.000999000999000999
+  },
+  "PACT_intent_family_gate": {
+    "observed_diff": 0.032692307692307694,
+    "p": 0.011988011988011988
+  },
   "PACT_no_checker": {
     "observed_diff": 0.3,
     "p": 0.000999000999000999
@@ -70,6 +86,14 @@
   "PACT_raw_memory": {
     "observed_diff": 0.2153846153846154,
     "p": 0.000999000999000999
+  },
+  "PACT_specificity_gate": {
+    "observed_diff": 0.038461538461538464,
+    "p": 0.000999000999000999
+  },
+  "PACT_state_action_split": {
+    "observed_diff": -0.0057692307692307696,
+    "p": 0.3806193806193806
   },
   "QueryOnlyClassifier": {
     "observed_diff": 0.3423076923076923,
