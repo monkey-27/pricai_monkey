@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pact.baselines import (
     ALREADY,
@@ -84,9 +84,61 @@ class R2Config:
 
 
 @dataclass(frozen=True)
+class PACTSConfig:
+    null_margin: float = 0.05
+    contract_margin: float = 0.05
+    broadness_alpha: float = 0.50
+    selection_threshold: float = 0.15
+    null_prior: float = 0.10
+    intent_prior_weight: float = 0.50
+    broadness: dict[str, float] = field(default_factory=dict)
+    z_mean: dict[str, float] = field(default_factory=dict)
+    z_std: dict[str, float] = field(default_factory=dict)
+    use_pairwise: bool = False
+
+
+@dataclass(frozen=True)
 class Intent:
     family: str
     confidence: float
+
+
+@dataclass(frozen=True)
+class CandidateScore:
+    contract: ProspectiveActionContract | None
+    contract_id: str
+    raw_score: float
+    adjusted_score: float
+    retrieval_score: float
+    cue_match: float
+    guard_match: float
+    action_match: float
+    check_match: float
+    family_match: float
+    priority_score: float
+    already_satisfied_score: float
+    conflict_score: float
+    intent_family_mismatch: float
+    low_specificity: float
+    broadness: float
+    null_score: float
+
+
+@dataclass(frozen=True)
+class SelectionResult:
+    selected: ProspectiveActionContract | None
+    selected_id: str
+    state: str
+    confidence: float
+    top: CandidateScore | None
+    second: CandidateScore | None
+    null_score: float
+    top_minus_null: float
+    top_minus_second: float
+    null_margin_pass: bool
+    contract_margin_pass: bool
+    candidates: tuple[CandidateScore, ...]
+    rationale: str
 
 
 INTENT_HINTS = {
@@ -423,7 +475,150 @@ class LearnedPAM(PACTR2):
         return pam
 
 
-def get_method(name: str, r2_config: R2Config | None = None) -> Method:
+PACT_S_MODE_NAMES = {
+    "null_only": "PACT_S_null_only",
+    "null_margin": "PACT_S_null_margin",
+    "second_margin": "PACT_S_second_margin",
+    "margins": "PACT_S_margins",
+    "broadness_penalty": "PACT_S_broadness_penalty",
+    "zscore_calibration": "PACT_S_zscore_calibration",
+    "pairwise_ranker": "PACT_S_pairwise_ranker",
+    "full": "PACT_S_full",
+    "no_NULL": "PACT_S_no_NULL",
+    "family_only": "PACT_S_family_only",
+    "contract_text_masked": "PACT_S_contract_text_masked",
+    "family_masked": "PACT_S_family_masked",
+    "multi_select_top2": "PACT_S_multi_select_top2",
+    "margin_abstain": "PACT_S_margin_abstain",
+}
+
+
+class PACTS(PACTFull):
+    name = "PACT_S_full"
+
+    def __init__(self, mode: str = "full", config: PACTSConfig | None = None, name: str | None = None) -> None:
+        super().__init__(name=name or PACT_S_MODE_NAMES[mode])
+        self.mode = mode
+        self.config = config or PACTSConfig()
+
+    def predict(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> Prediction:
+        selection = self.select(contracts, episode)
+        if selection.selected is None:
+            response = "No prospective action is selected; suppress or ask for clarification before acting."
+            return Prediction(self.name, episode.episode_id, "none", "suppress", selection.confidence, response, False, False, selection.rationale)
+        state = self.meta_state(selection.selected, episode)
+        if self.mode == "margin_abstain" and (not selection.null_margin_pass or not selection.contract_margin_pass):
+            state = "suppress"
+        if state == "suppress":
+            return Prediction(self.name, episode.episode_id, "none", "suppress", selection.confidence, "Selection abstained because the contract did not clear the operating margin.", False, False, selection.rationale)
+        response = self.execute(selection.selected, state)
+        repaired = False
+        if state in {"fire", "conflict"} and not rough_complete(selection.selected, response):
+            response = f"{compiled_plan(selection.selected)} {response}"
+            repaired = True
+        return make_prediction(self.name, episode, selection.selected, state, selection.confidence, response, repaired, selection.rationale)
+
+    def execute(self, contract: ProspectiveActionContract, state: str) -> str:
+        if state == "already_satisfied":
+            return "The prospective action was already satisfied; continue without redundant action."
+        prefix = "Priority conflict: follow the standing contract. " if state == "conflict" else ""
+        return f"{prefix}Plan: {FAMILY_COMPILER.get(contract.family, contract.action)} Check: {contract.check}"
+
+    def meta_state(self, contract: ProspectiveActionContract, episode: InferenceEpisode) -> str:
+        text = episode.text
+        intent = detect_intent_family(episode.current_query, episode.history_summary)
+        if contains(text, ALREADY):
+            return "already_satisfied"
+        if contains(text, CONFLICT_OPPOSITION + CONFLICT) and not (intent.family != "unknown" and intent.family != contract.family and intent.confidence >= 0.50):
+            return "conflict"
+        if contains(text, NEAR + WRONG) and self.mode in {"margin_abstain"}:
+            return "suppress"
+        return "fire"
+
+    def select(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> SelectionResult:
+        candidates = tuple(self.score_candidates(contracts, episode))
+        non_null = [item for item in candidates if item.contract is not None]
+        non_null.sort(key=lambda item: (item.adjusted_score, item.contract_id), reverse=True)
+        top = non_null[0] if non_null else None
+        second = non_null[1] if len(non_null) > 1 else None
+        null_score = next((item.adjusted_score for item in candidates if item.contract is None), self.null_score(episode, top))
+        if self.mode == "no_NULL":
+            null_score = -999.0
+        top_score = top.adjusted_score if top else -999.0
+        second_score = second.adjusted_score if second else -999.0
+        top_minus_null = top_score - null_score
+        top_minus_second = top_score - second_score
+        uses_null_margin = self.mode in {"null_margin", "margins", "broadness_penalty", "zscore_calibration", "pairwise_ranker", "full", "multi_select_top2", "margin_abstain"}
+        uses_second_margin = self.mode in {"second_margin", "margins", "broadness_penalty", "zscore_calibration", "pairwise_ranker", "full", "multi_select_top2", "margin_abstain"}
+        null_pass = (not uses_null_margin) or top_minus_null >= self.config.null_margin
+        contract_pass = (not uses_second_margin) or top_minus_second >= self.config.contract_margin
+        threshold_pass = top_score >= self.config.selection_threshold or self.mode == "no_NULL"
+        null_wins = self.mode != "no_NULL" and null_score >= top_score
+        selected = top.contract if top and threshold_pass and null_pass and contract_pass and not null_wins else None
+        state = "fire" if selected else "suppress"
+        rationale = (
+            f"select_then_execute mode={self.mode} selected={selected.contract_id if selected else 'NULL'} "
+            f"top={top.contract_id if top else 'none'} top_score={top_score:.3f} null={null_score:.3f} "
+            f"second={second.contract_id if second else 'none'} second_score={second_score:.3f} "
+            f"top_minus_null={top_minus_null:.3f} top_minus_second={top_minus_second:.3f} "
+            f"null_margin_pass={null_pass} contract_margin_pass={contract_pass}"
+        )
+        return SelectionResult(selected, selected.contract_id if selected else "NULL", state, max(0.01, min(0.99, top_score if selected else null_score)), top, second, null_score, top_minus_null, top_minus_second, null_pass, contract_pass, candidates, rationale)
+
+    def score_candidates(self, contracts: list[ProspectiveActionContract], episode: InferenceEpisode) -> list[CandidateScore]:
+        pool = allowed_contracts(contracts, episode)
+        out = [self.score_contract(c, episode) for c in pool]
+        out.append(CandidateScore(None, "NULL", self.null_score(episode, max(out, key=lambda item: item.adjusted_score, default=None)), self.null_score(episode, max(out, key=lambda item: item.adjusted_score, default=None)), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, self.null_score(episode, max(out, key=lambda item: item.adjusted_score, default=None))))
+        return out
+
+    def score_contract(self, c: ProspectiveActionContract, episode: InferenceEpisode) -> CandidateScore:
+        text = episode.text
+        intent = detect_intent_family(episode.current_query, episode.history_summary)
+        cue = 0.0 if self.mode in {"family_only", "contract_text_masked"} else overlap(c.cue, text)
+        guard = 0.0 if self.mode in {"family_only", "contract_text_masked"} else overlap(c.guard, text)
+        action = 0.0 if self.mode in {"family_only", "contract_text_masked"} else overlap(c.action, text)
+        check = 0.0 if self.mode in {"family_only", "contract_text_masked"} else overlap(c.check, text)
+        retrieval = max(cue, guard, action, check)
+        family_match = 0.0 if self.mode == "family_masked" else float(intent.family == c.family and intent.confidence >= 0.40)
+        mismatch = 0.0 if self.mode == "family_masked" else float(intent.family != "unknown" and intent.family != c.family and intent.confidence >= 0.50)
+        priority = {"safety": 0.08, "high": 0.05, "medium": 0.03, "low": 0.01}.get(c.priority, 0.02)
+        already_score = 0.10 if contains(text, ALREADY) else 0.0
+        conflict_score = 0.12 if contains(text, CONFLICT_OPPOSITION + CONFLICT) and c.priority in {"safety", "high"} else 0.0
+        low_specificity = max(0.0, 0.12 - retrieval)
+        text_score = 0.42 * cue + 0.28 * guard + 0.24 * action + 0.16 * check
+        if self.mode in {"family_only", "contract_text_masked"}:
+            text_score = 0.0
+        raw = text_score + self.config.intent_prior_weight * 0.22 * family_match + priority + already_score + conflict_score - 0.22 * mismatch - 0.35 * low_specificity
+        if episode.available_contract_ids and c.contract_id == episode.available_contract_ids[0] and self.mode not in {"family_only", "contract_text_masked"}:
+            raw += 0.04
+        if contains(text, WRONG) and mismatch:
+            raw -= 0.12
+        broadness = self.config.broadness.get(c.contract_id, 0.0)
+        adjusted = raw
+        if self.mode in {"broadness_penalty", "full", "pairwise_ranker", "multi_select_top2", "margin_abstain"}:
+            adjusted -= self.config.broadness_alpha * broadness
+        if self.mode == "zscore_calibration":
+            std = self.config.z_std.get(c.contract_id, 0.0) or 1.0
+            adjusted = (raw - self.config.z_mean.get(c.contract_id, 0.0)) / std
+        if self.mode in {"pairwise_ranker", "full"} and self.config.use_pairwise:
+            adjusted += 0.08 * family_match + 0.04 * (retrieval >= 0.12) - 0.08 * mismatch
+        return CandidateScore(c, c.contract_id, raw, adjusted, retrieval, cue, guard, action, check, family_match, priority, already_score, conflict_score, mismatch, low_specificity, broadness, 0.0)
+
+    def null_score(self, episode: InferenceEpisode, top: CandidateScore | None) -> float:
+        text = episode.text
+        score = self.config.null_prior
+        if contains(text, NEAR + WRONG):
+            score += 0.30
+        if not contains(text, ACTION_SEEKING + CONFLICT_OPPOSITION + CONFLICT + ALREADY):
+            score += 0.08
+        if top and top.retrieval_score < 0.10 and top.family_match == 0.0:
+            score += 0.12
+        if contains(text, CONFLICT_OPPOSITION + CONFLICT + ALREADY):
+            score -= 0.08
+        return score
+
+
+def get_method(name: str, r2_config: R2Config | None = None, pact_s_config: PACTSConfig | None = None) -> Method:
     ordinary = {
         "ContractPromptHeuristic": ContractPromptHeuristic(),
         "ContractClassifierOnly": ContractClassifierOnly(),
@@ -452,6 +647,20 @@ def get_method(name: str, r2_config: R2Config | None = None) -> Method:
         "LearnedPAM": LearnedPAM("LearnedPAM"),
         "LearnedPAM_plus_checker": LearnedPAM("LearnedPAM_plus_checker", checker=True),
         "LearnedPAM_plus_family_compiler": LearnedPAM("LearnedPAM_plus_family_compiler", family_compiler=True, checker=True),
+        "PACT_S_null_only": PACTS("null_only", pact_s_config),
+        "PACT_S_null_margin": PACTS("null_margin", pact_s_config),
+        "PACT_S_second_margin": PACTS("second_margin", pact_s_config),
+        "PACT_S_margins": PACTS("margins", pact_s_config),
+        "PACT_S_broadness_penalty": PACTS("broadness_penalty", pact_s_config),
+        "PACT_S_zscore_calibration": PACTS("zscore_calibration", pact_s_config),
+        "PACT_S_pairwise_ranker": PACTS("pairwise_ranker", pact_s_config),
+        "PACT_S_full": PACTS("full", pact_s_config),
+        "PACT_S_no_NULL": PACTS("no_NULL", pact_s_config),
+        "PACT_S_family_only": PACTS("family_only", pact_s_config),
+        "PACT_S_contract_text_masked": PACTS("contract_text_masked", pact_s_config),
+        "PACT_S_family_masked": PACTS("family_masked", pact_s_config),
+        "PACT_S_multi_select_top2": PACTS("multi_select_top2", pact_s_config),
+        "PACT_S_margin_abstain": PACTS("margin_abstain", pact_s_config),
     }
     return ordinary[name]
 
@@ -483,6 +692,20 @@ METHOD_NAMES = [
     "QueryPlusFamilyClassifier",
     "QueryPlusContractClassifier",
     "QueryPlusWrongContractOnly",
+    "PACT_S_null_only",
+    "PACT_S_null_margin",
+    "PACT_S_second_margin",
+    "PACT_S_margins",
+    "PACT_S_broadness_penalty",
+    "PACT_S_zscore_calibration",
+    "PACT_S_pairwise_ranker",
+    "PACT_S_full",
+    "PACT_S_no_NULL",
+    "PACT_S_family_only",
+    "PACT_S_contract_text_masked",
+    "PACT_S_family_masked",
+    "PACT_S_multi_select_top2",
+    "PACT_S_margin_abstain",
     "PACT_no_guard",
     "PACT_no_checker",
     "PACT_no_compiler",

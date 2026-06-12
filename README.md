@@ -97,6 +97,20 @@ PACT variants:
 - `LearnedPAM`
 - `LearnedPAM_plus_checker`
 - `LearnedPAM_plus_family_compiler`
+- `PACT_S_null_only`
+- `PACT_S_null_margin`
+- `PACT_S_second_margin`
+- `PACT_S_margins`
+- `PACT_S_broadness_penalty`
+- `PACT_S_zscore_calibration`
+- `PACT_S_pairwise_ranker`
+- `PACT_S_full`
+- `PACT_S_no_NULL`
+- `PACT_S_family_only`
+- `PACT_S_contract_text_masked`
+- `PACT_S_family_masked`
+- `PACT_S_multi_select_top2`
+- `PACT_S_margin_abstain`
 - `PACT_no_guard`
 - `PACT_no_checker`
 - `PACT_no_compiler`
@@ -280,6 +294,77 @@ Interpretation:
 - `manual_audit_d3_template.csv` is a human-audit template, not completed
   manual evidence.
 
+## PACT-S
+
+PACT-S tests the final-paper mechanism suggested by D3: **select then
+execute**, rather than independently activating every plausible contract.
+
+The selector scores every available prospective contract plus an explicit
+`NULL` option. A contract fires only if it beats `NULL`, clears the configured
+selection threshold, and, for margin variants, beats the second-best contract
+by enough. Execution then uses the D3 family-specific checklist and checker.
+
+PACT-S was needed because D3 fixed much of action execution, but multi-contract
+stress still collapsed when many standing contracts competed. That made the
+remaining bottleneck look like scalable contract selection, not compiler
+quality alone.
+
+PACT-S differs from earlier variants this way:
+
+- PACT/R2/D3 mostly ask whether an individual selected contract should fire.
+- PACT-S first chooses one contract or `NULL` competitively.
+- Broadness and z-score diagnostics test whether generic contracts become
+  attractors.
+- Family/text masking diagnostics test whether the contract text matters or
+  the family label is carrying the result.
+- Oracles and diagnostic stress views are clearly not fair method components.
+
+Run the focused PACT-S suite:
+
+```bash
+python3 -m pact.run_eval \
+  --dataset pact_causal_520 \
+  --methods pact_s \
+  --split test \
+  --audit
+```
+
+PACT-S output files include:
+
+- `outputs/pact_s_summary.csv`
+- `outputs/pact_s_threshold_search.csv`
+- `outputs/pact_s_best_config.json`
+- `outputs/pact_s_topk_ranking_trace.csv`
+- `outputs/pact_s_gold_rank_distribution.csv`
+- `outputs/pact_s_null_calibration_curve.csv`
+- `outputs/pact_s_second_best_margin_curve.csv`
+- `outputs/pact_s_contract_broadness.csv`
+- `outputs/pact_s_broadness_ablation.csv`
+- `outputs/pact_s_broad_contract_traps.csv`
+- `outputs/pact_s_field_masking.csv`
+- `outputs/pact_s_pool_composition_stress.csv`
+- `outputs/pact_s_multi_contract_stress.csv`
+- `outputs/pact_s_conflict_taxonomy.csv`
+- `outputs/pact_s_target_completion_mismatches.csv`
+- `outputs/pact_s_naturalistic_failure_taxonomy.csv`
+- `outputs/manual_audit_pact_s_template.csv`
+- `outputs/audit_pact_s.md`
+
+Interpretation:
+
+- `pact_s_summary.csv` is the first table to read. It compares PACT-S variants,
+  D3 best, controls, and oracle contract selection.
+- `pact_s_topk_ranking_trace.csv` shows whether failures are retrieval misses,
+  NULL calibration failures, or low-margin ambiguity.
+- `pact_s_contract_broadness.csv` and `pact_s_broad_contract_traps.csv` show
+  which contracts attract non-gold queries.
+- `pact_s_field_masking.csv` tests whether cue/guard/action/check text matters.
+- `pact_s_multi_contract_stress.csv` and
+  `pact_s_pool_composition_stress.csv` are the scalable-memory stress tests.
+- `pact_s_naturalistic_failure_taxonomy.csv` is the real-agent-like failure
+  view.
+- `manual_audit_pact_s_template.csv` is only a template until a human fills it.
+
 ## Saved Pilot Result
 
 The saved run in `outputs/` reports:
@@ -341,6 +426,16 @@ Run tests:
 
 ```bash
 python3 -m pytest -q
+```
+
+Run the focused PACT-S diagnostics:
+
+```bash
+python3 -m pact.run_eval \
+  --dataset pact_causal_520 \
+  --methods pact_s \
+  --split test \
+  --audit
 ```
 
 Useful focused comparison:
@@ -409,6 +504,31 @@ Final evaluation writes:
 - `outputs/d3_fixed_errors.csv`
 - `outputs/d3_new_errors.csv`
 - `outputs/manual_audit_d3_template.csv`
+- `outputs/pact_s_summary.csv`
+- `outputs/pact_s_threshold_search.csv`
+- `outputs/pact_s_best_config.json`
+- `outputs/pact_s_topk_ranking_trace.csv`
+- `outputs/pact_s_contract_broadness.csv`
+- `outputs/pact_s_broadness_ablation.csv`
+- `outputs/pact_s_broad_contract_traps.csv`
+- `outputs/pact_s_field_masking.csv`
+- `outputs/pact_s_field_permutation.csv`
+- `outputs/pact_s_contract_compression.csv`
+- `outputs/pact_s_contract_paraphrase_stress.csv`
+- `outputs/pact_s_multi_contract_stress.csv`
+- `outputs/pact_s_pool_composition_stress.csv`
+- `outputs/pact_s_hard_negative_ladder.csv`
+- `outputs/pact_s_null_dominant_pool.csv`
+- `outputs/pact_s_multi_valid_contracts.csv`
+- `outputs/pact_s_conflict_taxonomy.csv`
+- `outputs/pact_s_compiler_granularity.csv`
+- `outputs/pact_s_selector_variant_metrics.csv`
+- `outputs/pact_s_pairwise_learning.csv`
+- `outputs/pact_s_contract_order_invariance.csv`
+- `outputs/pact_s_contract_duplication.csv`
+- `outputs/pact_s_safety_priority_matrix.csv`
+- `outputs/pact_s_naturalistic_failure_taxonomy.csv`
+- `outputs/manual_audit_pact_s_template.csv`
 - `outputs/audit_dataset.md`
 - `outputs/audit_baselines.md`
 - `outputs/audit_causality.md`
@@ -418,6 +538,7 @@ Final evaluation writes:
 - `outputs/audit_report.md`
 - `outputs/audit_r2.md`
 - `outputs/audit_d3.md`
+- `outputs/audit_pact_s.md`
 
 ## Preregistered Decision Rule
 
@@ -448,6 +569,19 @@ The D3 decision is diagnostic. A positive deterministic decision still needs
 the caveats in `outputs/audit_d3.md`, especially naturalistic performance,
 remaining conflict failures, target-completion mismatches, and the unfinished
 manual audit template.
+
+The PACT-S audit emits one of:
+
+- `PACT_S_READY`
+- `NEED_LEARNED_SELECTOR`
+- `NEED_CONTRACT_REPRESENTATION_REDESIGN`
+- `NEED_COMPILER_CHECKER_REDESIGN`
+- `NATURALISTIC_BOTTLENECK`
+- `NARROW_OR_KILL`
+
+PACT-S is ready only if it improves scalable multi-contract selection while
+preserving D3's indirect-trigger strength. If it mainly suppresses wrong
+contracts by missing true triggers, the correct conclusion is negative.
 
 ## Code Map
 

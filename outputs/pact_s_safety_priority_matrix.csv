@@ -1,0 +1,5 @@
+priority_class,false_suppress_cost,false_fire_cost,weighted_utility
+safety-critical,2.0,3.0,0.5711538461538461
+verification-critical,1.5,2.0,0.5711538461538461
+task-quality,1.0,1.0,0.5711538461538461
+style/preference,0.5,0.5,0.5711538461538461

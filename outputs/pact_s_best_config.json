@@ -1,0 +1,46 @@
+{
+  "broadness": {
+    "analysis_hygiene": 0.0012558139534883724,
+    "benchmark_contribution_role": 0.0016431471024404636,
+    "cs_major_selectivity": 0.0012558139534883724,
+    "entry_constraints": 0.00903699980246751,
+    "flask_auth_security": 0.0032492848597748276,
+    "health_uncertainty": 0.0016097106786711335,
+    "legal_policy_uncertainty": 0.09554137632368548,
+    "nut_safety": 0.0022343750000000002,
+    "plain_professional_email": 0.00326301524051273,
+    "research_prior_work": 0.004256357889889182,
+    "schedule_conflict_check": 0.005567935928594202,
+    "verify_current_facts": 0.0012631578947368423
+  },
+  "config": {
+    "broadness_alpha": 0.0,
+    "contract_margin": 0.0,
+    "intent_prior_weight": 0.5,
+    "null_margin": 0.15,
+    "null_prior": 0.0,
+    "selection_threshold": 0.15,
+    "use_pairwise": false
+  },
+  "dev_result": {
+    "broadness_alpha": 0.0,
+    "conflict_safe_action_accuracy": 0.75,
+    "constraints_pass": false,
+    "contract_margin": 0.0,
+    "end_to_end_success_strict": 0.7441860465116279,
+    "false_trigger_rate_including_contract_swap": 0.010752688172043012,
+    "indirect_end_to_end_success_strict": 0.39215686274509803,
+    "intent_prior_weight": 0.5,
+    "multi_contract_strict_e2e_dev": 0.7093023255813954,
+    "naturalistic_success": 0.9166666666666666,
+    "null_margin": 0.15,
+    "null_prior": 0.0,
+    "objective": 1.7279614021152347,
+    "selection_threshold": 0.15,
+    "target_action_completion_rate": 0.43661971830985913,
+    "use_pairwise": false,
+    "wrong_contract_false_trigger_rate": 0.0
+  },
+  "note": "Selected using dev split only; reused unchanged for test/all PACT-S reporting.",
+  "seed": 0
+}

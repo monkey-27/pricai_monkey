@@ -1,0 +1,5 @@
+metric,value
+target > distractor accuracy,0.7692307692307693
+target > NULL accuracy,0.5384615384615384
+NULL > wrong contract accuracy,0.9307692307692308
+pairwise ranking AUC,0.7461538461538462

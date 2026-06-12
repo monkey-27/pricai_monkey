@@ -75,6 +75,62 @@
     "observed_diff": 0.0019230769230769232,
     "p": 1.0
   },
+  "PACT_S_broadness_penalty": {
+    "observed_diff": 0.18846153846153846,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_contract_text_masked": {
+    "observed_diff": 0.2865384615384615,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_family_masked": {
+    "observed_diff": 0.21923076923076923,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_family_only": {
+    "observed_diff": 0.2865384615384615,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_full": {
+    "observed_diff": 0.18846153846153846,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_margin_abstain": {
+    "observed_diff": 0.18846153846153846,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_margins": {
+    "observed_diff": 0.18846153846153846,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_multi_select_top2": {
+    "observed_diff": 0.18846153846153846,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_no_NULL": {
+    "observed_diff": 0.5423076923076923,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_null_margin": {
+    "observed_diff": 0.18846153846153846,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_null_only": {
+    "observed_diff": 0.17884615384615385,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_pairwise_ranker": {
+    "observed_diff": 0.18846153846153846,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_second_margin": {
+    "observed_diff": 0.17884615384615385,
+    "p": 0.000999000999000999
+  },
+  "PACT_S_zscore_calibration": {
+    "observed_diff": 0.3346153846153846,
+    "p": 0.000999000999000999
+  },
   "PACT_conditional_bonus": {
     "observed_diff": 0.03653846153846154,
     "p": 0.000999000999000999

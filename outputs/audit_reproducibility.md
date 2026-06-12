@@ -3,8 +3,8 @@
 Simulated subagent: Reproducibility Audit Agent.
 `/Library/Frameworks/Python.framework/Versions/3.12/bin/python3 -m pytest -q` exit=0
 ```
-.............................                                            [100%]
-29 passed in 21.82s
+.....................................                                    [100%]
+37 passed in 41.93s
 ```
 `/Library/Frameworks/Python.framework/Versions/3.12/bin/python3 -m pact.dataset --dataset pact_causal_520 --write` exit=0
 ```

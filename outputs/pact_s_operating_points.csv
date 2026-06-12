@@ -1,0 +1,4 @@
+operating_point,null_margin,wrong_contract_ft,indirect_success
+conservative,0.15,0.0,0.29545454545454547
+balanced,0.15,0.0,0.29545454545454547
+aggressive,0.0,0.0,0.29545454545454547

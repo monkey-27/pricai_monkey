@@ -1,0 +1,6 @@
+subtype,state_consistency
+current_fact_verification_conflict,0.2857142857142857
+medical_or_legal_certainty_conflict,0.2222222222222222
+multi_contract_conflict,0.0
+skip_safety_or_verification,0.6666666666666666
+unsafe_recommendation_conflict,0.2

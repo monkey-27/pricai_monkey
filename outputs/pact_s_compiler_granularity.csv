@@ -1,0 +1,6 @@
+compiler,target_completion
+raw action,0.75
+generic checklist,0.32727272727272727
+family-specific checklist,0.32727272727272727
+contract-specific checklist,0.32727272727272727
+oracle/gold-rubric checklist,1.0

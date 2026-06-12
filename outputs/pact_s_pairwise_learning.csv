@@ -1,0 +1,3 @@
+selector,strict_e2e,trained_on
+deterministic,0.6942307692307692,
+pairwise_fallback,0.6942307692307692,dev_only

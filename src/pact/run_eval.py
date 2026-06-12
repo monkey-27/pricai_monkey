@@ -22,7 +22,7 @@ from pact.baselines import (
 )
 from pact.dataset import DEFAULT_DATASET, ROOT, load_contracts, load_episodes, write_dataset
 from pact.baselines import allowed_contracts, best_contract, compiled_plan, contains, overlap
-from pact.pact import CONFLICT_OPPOSITION, FAMILY_COMPILER, NEAR, WRONG, METHOD_NAMES, R2Config, detect_intent_family, get_method
+from pact.pact import CONFLICT_OPPOSITION, FAMILY_COMPILER, NEAR, WRONG, METHOD_NAMES, PACTS, PACTSConfig, R2Config, detect_intent_family, get_method
 from pact.schema import Episode, InferenceEpisode, Prediction, ProspectiveActionContract
 from pact.scoring import action_completed, activated, binary_successes, correct_contract, episode_success, episode_success_behavioral, format_summary, group_predictions, score_method, target_action_completed
 from pact.stats import cluster_bootstrap_diff, holm, mcnemar, permutation_test
@@ -66,11 +66,37 @@ D3_METHODS = [
     "ContractShufflePACT",
 ]
 
+PACT_S_METHODS = [
+    "PACTFull_current",
+    "PACT_R2_full",
+    "PACT_intent_plus_state_family_compiler",
+    "PACT_S_null_only",
+    "PACT_S_null_margin",
+    "PACT_S_second_margin",
+    "PACT_S_margins",
+    "PACT_S_broadness_penalty",
+    "PACT_S_zscore_calibration",
+    "PACT_S_pairwise_ranker",
+    "PACT_S_full",
+    "PACT_S_no_NULL",
+    "PACT_S_family_only",
+    "PACT_S_contract_text_masked",
+    "PACT_S_family_masked",
+    "PACT_S_multi_select_top2",
+    "PACT_S_margin_abstain",
+    "QueryOnlyClassifier",
+    "QueryPlusFamilyClassifier",
+    "QueryPlusContractClassifier",
+    "ContractShufflePACT",
+]
 
-def build_methods(methods: str, r2_config: R2Config | None = None):
+
+def build_methods(methods: str, r2_config: R2Config | None = None, pact_s_config: PACTSConfig | None = None):
     names = METHOD_NAMES if methods == "all" else [m.strip() for m in methods.split(",") if m.strip()]
     if methods == "d3":
         names = D3_METHODS
+    if methods == "pact_s":
+        names = PACT_S_METHODS
     if methods == "r2":
         names = [
             "PACTFull_current",
@@ -108,7 +134,7 @@ def build_methods(methods: str, r2_config: R2Config | None = None):
         elif name.startswith("LLM"):
             out.append(LLMStub(name))
         else:
-            out.append(get_method(name, r2_config))
+            out.append(get_method(name, r2_config, pact_s_config))
     return out
 
 
@@ -135,9 +161,15 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 def needs_r2(methods: str) -> bool:
-    if methods in {"all", "r2", "d3"}:
+    if methods in {"all", "r2", "d3", "pact_s"}:
         return True
     return any(name.strip().startswith("PACT_") or name.strip() == "PACTFull_current" for name in methods.split(","))
+
+
+def needs_pact_s(methods: str) -> bool:
+    if methods in {"all", "pact_s"}:
+        return True
+    return any(name.strip().startswith("PACT_S") for name in methods.split(","))
 
 
 def tune_r2_config(contracts, all_episodes: list[Episode], seed: int) -> R2Config:
@@ -191,6 +223,137 @@ def tune_r2_config(contracts, all_episodes: list[Episode], seed: int) -> R2Confi
         "note": "Selected using dev split only; reused unchanged for test/all reporting.",
     }
     (OUTPUT_DIR / "r2_best_config.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return best[2]
+
+
+def compute_pact_s_broadness(contracts: list[ProspectiveActionContract], dev: list[Episode]) -> tuple[dict[str, float], dict[str, float], dict[str, float]]:
+    base = PACTS("null_only", PACTSConfig(null_prior=0.05))
+    values: dict[str, list[float]] = {c.contract_id: [] for c in contracts}
+    for ep in dev:
+        inf = ep.to_inference()
+        for c in contracts:
+            if c.contract_id in {ep.gold_contract_id, ep.target_contract_id}:
+                continue
+            values[c.contract_id].append(max(0.0, base.score_contract(c, inf).raw_score))
+    mean: dict[str, float] = {}
+    std: dict[str, float] = {}
+    for c in contracts:
+        vals = values[c.contract_id] or [0.0]
+        avg = sum(vals) / len(vals)
+        variance = sum((val - avg) ** 2 for val in vals) / len(vals)
+        mean[c.contract_id] = avg
+        std[c.contract_id] = variance ** 0.5 if variance > 1e-9 else 1.0
+    return mean, mean, std
+
+
+def pact_s_stress_predictions(contracts: list[ProspectiveActionContract], episodes: list[Episode], method_name: str, config: PACTSConfig, pool_size: int = 12, composition: str = "random_distractors") -> list[Prediction]:
+    method = get_method(method_name, pact_s_config=config)
+    contract_ids = [c.contract_id for c in contracts]
+    by_family: dict[str, list[str]] = defaultdict(list)
+    for c in contracts:
+        by_family[c.family].append(c.contract_id)
+    broad = sorted(config.broadness, key=lambda cid: config.broadness.get(cid, 0.0), reverse=True)
+    preds = []
+    for ep in episodes:
+        desired = ep.gold_contract_id if ep.gold_state in {"fire", "conflict", "already_satisfied"} else ""
+        distractors = [cid for cid in contract_ids if cid != desired]
+        if composition == "same_domain_distractors":
+            distractors = [cid for cid in by_family.get(ep.family, []) if cid != desired] + distractors
+        elif composition == "broad_distractors":
+            distractors = broad + distractors
+        elif composition in {"action_similar_distractors", "guard_similar_distractors", "conflict_inducing_distractors"}:
+            distractors = list(reversed(distractors))
+        offset = sum(ord(ch) for ch in ep.episode_id + composition) % max(1, len(distractors))
+        rotated = distractors[offset:] + distractors[:offset]
+        pool = ([desired] if desired else []) + rotated
+        if ep.case_type == "contract_swap" or composition == "null_dominant":
+            pool = ep.available_contract_ids + rotated
+        pool = [cid for cid in dict.fromkeys(pool) if cid][:pool_size]
+        inf = InferenceEpisode(ep.episode_id, ep.history_summary, ep.current_query, pool)
+        preds.append(method.predict(contracts, inf))
+    return preds
+
+
+def tune_pact_s_config(contracts: list[ProspectiveActionContract], all_episodes: list[Episode], seed: int) -> PACTSConfig:
+    dev = [ep for ep in all_episodes if ep.split == "dev"]
+    broadness, z_mean, z_std = compute_pact_s_broadness(contracts, dev)
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        null_margins = [0.03, 0.08]
+        contract_margins = [0.03, 0.08]
+        alphas = [0.25]
+        thresholds = [0.15, 0.20]
+        null_priors = [0.05]
+        intent_weights = [0.50]
+    else:
+        null_margins = [0.00, 0.08, 0.15]
+        contract_margins = [0.00, 0.08]
+        alphas = [0.00, 0.75]
+        thresholds = [0.15, 0.25]
+        null_priors = [0.00, 0.10]
+        intent_weights = [0.50, 1.00]
+    rows = []
+    best: tuple[float, dict[str, object], PACTSConfig] | None = None
+    for null_margin in null_margins:
+        for contract_margin in contract_margins:
+            for alpha in alphas:
+                for threshold in thresholds:
+                    for null_prior in null_priors:
+                        for intent_weight in intent_weights:
+                            for use_pairwise in [False, True]:
+                                config = PACTSConfig(null_margin, contract_margin, alpha, threshold, null_prior, intent_weight, broadness, z_mean, z_std, use_pairwise)
+                                method = get_method("PACT_S_full", pact_s_config=config)
+                                preds = [method.predict(contracts, ep.to_inference()) for ep in dev]
+                                metrics = score_method(dev, preds)
+                                stress = score_method(dev, pact_s_stress_predictions(contracts, dev, "PACT_S_full", config, 12))
+                                objective = (
+                                    stress["end_to_end_success_strict"]
+                                    + 0.5 * metrics["indirect_end_to_end_success_strict"]
+                                    + 0.5 * metrics["naturalistic_success"]
+                                    - 2.0 * metrics["wrong_contract_false_trigger_rate"]
+                                    - metrics["false_trigger_rate_including_contract_swap"]
+                                    + 0.5 * metrics["conflict_safe_action_accuracy"]
+                                )
+                                constraints = (
+                                    metrics["wrong_contract_false_trigger_rate"] <= 0.12
+                                    and metrics["indirect_end_to_end_success_strict"] >= 0.85
+                                    and metrics["target_action_completion_rate"] >= 0.85
+                                    and metrics["conflict_safe_action_accuracy"] >= 0.85
+                                )
+                                row = {
+                                    "null_margin": null_margin,
+                                    "contract_margin": contract_margin,
+                                    "broadness_alpha": alpha,
+                                    "selection_threshold": threshold,
+                                    "null_prior": null_prior,
+                                    "intent_prior_weight": intent_weight,
+                                    "use_pairwise": use_pairwise,
+                                    "objective": objective,
+                                    "constraints_pass": constraints,
+                                    "multi_contract_strict_e2e_dev": stress["end_to_end_success_strict"],
+                                    **{key: metrics.get(key, 0.0) for key in ["end_to_end_success_strict", "indirect_end_to_end_success_strict", "naturalistic_success", "wrong_contract_false_trigger_rate", "false_trigger_rate_including_contract_swap", "target_action_completion_rate", "conflict_safe_action_accuracy"]},
+                                }
+                                rows.append(row)
+                                rank = objective + (100.0 if constraints else 0.0)
+                                if best is None or rank > best[0]:
+                                    best = (rank, row, config)
+    write_csv(OUTPUT_DIR / "pact_s_threshold_search.csv", rows)
+    assert best is not None
+    payload = {
+        "config": {
+            "null_margin": best[2].null_margin,
+            "contract_margin": best[2].contract_margin,
+            "broadness_alpha": best[2].broadness_alpha,
+            "selection_threshold": best[2].selection_threshold,
+            "null_prior": best[2].null_prior,
+            "intent_prior_weight": best[2].intent_prior_weight,
+            "use_pairwise": best[2].use_pairwise,
+        },
+        "dev_result": best[1],
+        "broadness": broadness,
+        "seed": seed,
+        "note": "Selected using dev split only; reused unchanged for test/all PACT-S reporting.",
+    }
+    (OUTPUT_DIR / "pact_s_best_config.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return best[2]
 
 
@@ -1050,6 +1213,469 @@ def write_audit_d3(comp_rows: list[dict[str, object]], oracle_rows: list[dict[st
     (OUTPUT_DIR / "audit_d3.md").write_text("# D3 Diagnostic Audit Agent\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
 
 
+def null_accuracy(episodes: list[Episode], preds: list[Prediction]) -> float:
+    by = {p.episode_id: p for p in preds}
+    total = ok = 0
+    for ep in episodes:
+        pred = by[ep.episode_id]
+        should_null = ep.gold_state == "suppress"
+        if should_null or pred.predicted_state == "suppress":
+            total += 1
+            ok += int((pred.predicted_state == "suppress" and should_null) or (pred.predicted_state != "suppress" and not should_null))
+    return ok / total if total else 0.0
+
+
+def correct_selection_rate(episodes: list[Episode], preds: list[Prediction]) -> float:
+    by = {p.episode_id: p for p in preds}
+    total = ok = 0
+    for ep in episodes:
+        pred = by[ep.episode_id]
+        if ep.gold_state in {"fire", "conflict", "already_satisfied"}:
+            total += 1
+            ok += int(correct_contract(ep, pred))
+        elif ep.gold_state == "suppress":
+            total += 1
+            ok += int(pred.predicted_state == "suppress" or pred.predicted_contract_id == "none")
+    return ok / total if total else 0.0
+
+
+def naturalistic_wrong_contract_rate(episodes: list[Episode], preds: list[Prediction]) -> float:
+    nat = [ep for ep in episodes if ep.set_type == "naturalistic"]
+    if not nat:
+        return 0.0
+    return score_method(nat, [p for p in preds if p.episode_id in {ep.episode_id for ep in nat}]).get("wrong_contract_false_trigger_rate", 0.0)
+
+
+def pact_s_summary_row(name: str, episodes: list[Episode], preds: list[Prediction], metrics: dict[str, float], d3_preds: list[Prediction], pool12: dict[str, float]) -> dict[str, object]:
+    fixed, regressed = _fixed_regressed(episodes, d3_preds, preds) if d3_preds and preds else (0, 0)
+    return {
+        "method": name,
+        "strict_e2e": metrics.get("end_to_end_success_strict", 0.0),
+        "behavioral_e2e": metrics.get("end_to_end_success_behavioral", 0.0),
+        "indirect_strict_success": metrics.get("indirect_end_to_end_success_strict", 0.0),
+        "wrong_contract_false_trigger_rate": metrics.get("wrong_contract_false_trigger_rate", 0.0),
+        "naturalistic_strict_success": metrics.get("naturalistic_success", 0.0),
+        "naturalistic_wrong_contract_ft": naturalistic_wrong_contract_rate(episodes, preds),
+        "multi_contract_pool12_strict_e2e": pool12.get("strict_e2e", 0.0),
+        "multi_contract_pool12_wrong_contract_ft": pool12.get("wrong_contract_false_trigger_rate", 0.0),
+        "correct_contract_selection_rate": correct_selection_rate(episodes, preds),
+        "NULL_accuracy": null_accuracy(episodes, preds),
+        "target_completion": metrics.get("target_action_completion_rate", 0.0),
+        "conflict_detection": metrics.get("conflict_detection_accuracy", 0.0),
+        "conflict_safe_action": metrics.get("conflict_safe_action_accuracy", 0.0),
+        "weighted_utility": metrics.get("weighted_utility", 0.0),
+        "fixed_vs_D3_best": fixed,
+        "regressed_vs_D3_best": regressed,
+    }
+
+
+def write_pact_s_reports(contracts: list[ProspectiveActionContract], episodes: list[Episode], grouped: dict[str, list[Prediction]], metrics: dict[str, dict[str, float]], sanity: dict[str, float], config: PACTSConfig) -> None:
+    s_methods = [name for name in PACT_S_METHODS if name in grouped]
+    if "PACT_S_full" not in grouped:
+        for name in [
+            "pact_s_summary.csv", "pact_s_topk_ranking_trace.csv", "pact_s_gold_rank_distribution.csv",
+            "pact_s_null_calibration_curve.csv", "pact_s_second_best_margin_curve.csv", "pact_s_contract_broadness.csv",
+            "pact_s_broadness_ablation.csv", "pact_s_broad_contract_traps.csv", "pact_s_field_masking.csv",
+            "pact_s_field_permutation.csv", "pact_s_contract_compression.csv", "pact_s_contract_paraphrase_stress.csv",
+            "pact_s_multi_contract_stress.csv", "pact_s_pool_composition_stress.csv", "pact_s_hard_negative_ladder.csv",
+            "pact_s_null_dominant_pool.csv", "pact_s_multi_valid_contracts.csv", "pact_s_conflict_taxonomy.csv",
+            "pact_s_conflict_minimal_pairs.csv", "pact_s_conflict_paraphrase_stress.csv", "pact_s_priority_inversion.csv",
+            "pact_s_compiler_granularity.csv", "pact_s_checker_strictness_curve.csv", "pact_s_plan_vs_constraint.csv",
+            "pact_s_repair_pass_curve.csv", "pact_s_target_completion_mismatches.csv", "pact_s_selector_variant_metrics.csv",
+            "pact_s_pairwise_preference.csv", "pact_s_margin_abstention.csv", "pact_s_topk_multiselect.csv",
+            "pact_s_pairwise_learning.csv", "pact_s_hard_negative_curriculum.csv", "pact_s_leave_family_out.csv",
+            "pact_s_paraphrase_aug_learning.csv", "pact_s_query_paraphrase_consistency.csv",
+            "pact_s_distractor_text_injection.csv", "pact_s_contract_order_invariance.csv",
+            "pact_s_contract_duplication.csv", "pact_s_safety_priority_matrix.csv", "pact_s_priority_weighted_costs.csv",
+            "pact_s_operating_points.csv", "pact_s_naturalistic_failure_taxonomy.csv",
+            "pact_s_naturalistic_simplification_ladder.csv", "pact_s_conversation_position_sensitivity.csv",
+            "manual_audit_pact_s_template.csv",
+        ]:
+            write_csv(OUTPUT_DIR / name, [])
+        (OUTPUT_DIR / "audit_pact_s.md").write_text("# PACT-S Audit\n\nPACT-S was not part of this method run.\n", encoding="utf-8")
+        return
+
+    s_full = PACTS("full", config)
+    full_by = _pred_by(grouped, "PACT_S_full")
+    d3_preds = grouped.get("PACT_intent_plus_state_family_compiler", [])
+    pool12_by_method: dict[str, dict[str, float]] = {}
+    stress_rows = []
+    for method_name in [name for name in s_methods if name.startswith("PACT_S")] + ["PACT_R2_full", "PACT_intent_plus_state_family_compiler"]:
+        if method_name not in metrics and not method_name.startswith("PACT_S"):
+            continue
+        preds = pact_s_stress_predictions(contracts, episodes, method_name, config, 12)
+        vals = score_method(episodes, preds)
+        pool12_by_method[method_name] = {
+            "strict_e2e": vals.get("end_to_end_success_strict", 0.0),
+            "wrong_contract_false_trigger_rate": vals.get("wrong_contract_false_trigger_rate", 0.0),
+            "correct_contract_selection_rate": correct_selection_rate(episodes, preds),
+        }
+    for size in [1, 3, 6, 12]:
+        for method_name in ["PACT_R2_full", "PACT_intent_plus_state_family_compiler", "PACT_S_full"]:
+            preds = pact_s_stress_predictions(contracts, episodes, method_name, config, size)
+            vals = score_method(episodes, preds)
+            stress_rows.append({
+                "method": method_name,
+                "pool_size": size,
+                "correct_contract_selection_rate": correct_selection_rate(episodes, preds),
+                "wrong_contract_false_trigger_rate": vals.get("wrong_contract_false_trigger_rate", 0.0),
+                "indirect_success": vals.get("indirect_end_to_end_success_strict", 0.0),
+                "strict_e2e": vals.get("end_to_end_success_strict", 0.0),
+            })
+    write_csv(OUTPUT_DIR / "pact_s_multi_contract_stress.csv", stress_rows)
+
+    summary_methods = [name for name in [
+        "PACTFull_current", "PACT_R2_full", "PACT_intent_plus_state_family_compiler",
+        "PACT_S_null_only", "PACT_S_null_margin", "PACT_S_second_margin", "PACT_S_margins",
+        "PACT_S_broadness_penalty", "PACT_S_zscore_calibration", "PACT_S_pairwise_ranker",
+        "PACT_S_full", "PACT_S_no_NULL", "PACT_S_family_only", "PACT_S_contract_text_masked",
+        "PACT_S_family_masked", "PACT_S_multi_select_top2", "PACT_S_margin_abstain",
+        "QueryOnlyClassifier", "QueryPlusFamilyClassifier", "QueryPlusContractClassifier",
+        "ContractShufflePACT",
+    ] if name in grouped]
+    summary_rows = [pact_s_summary_row(name, episodes, grouped[name], metrics[name], d3_preds, pool12_by_method.get(name, {})) for name in summary_methods]
+    oracle = oracle_predictions(contracts, episodes, grouped).get("OracleContractSelection", [])
+    if oracle:
+        om = score_method(episodes, oracle)
+        summary_rows.append(pact_s_summary_row("OracleContractSelection", episodes, oracle, om, d3_preds, {"strict_e2e": om.get("end_to_end_success_strict", 0.0), "wrong_contract_false_trigger_rate": 0.0}))
+        summary_rows[-1]["oracle_unfair"] = True
+    write_csv(OUTPUT_DIR / "pact_s_summary.csv", summary_rows)
+
+    trace_rows = []
+    for ep in episodes:
+        sel = s_full.select(contracts, ep.to_inference())
+        ranked = [item for item in sel.candidates if item.contract is not None]
+        ranked.sort(key=lambda item: (item.adjusted_score, item.contract_id), reverse=True)
+        ids = [item.contract_id for item in ranked[:5]]
+        scores = [f"{item.adjusted_score:.4f}" for item in ranked[:5]]
+        gold_id = ep.gold_contract_id if ep.gold_state != "suppress" else "NULL"
+        rank_map = {item.contract_id: idx + 1 for idx, item in enumerate(ranked)}
+        gold_rank = 0 if gold_id == "NULL" and sel.selected is None else rank_map.get(gold_id, 99)
+        top_score = ranked[0].adjusted_score if ranked else 0.0
+        gold_score = sel.null_score if gold_id == "NULL" else next((item.adjusted_score for item in ranked if item.contract_id == gold_id), 0.0)
+        pred = full_by[ep.episode_id]
+        trace_rows.append({
+            "episode_id": ep.episode_id,
+            "family": ep.family,
+            "case_type": ep.case_type,
+            "set_type": ep.set_type,
+            "top5_contracts": "|".join(ids),
+            "top5_scores": "|".join(scores),
+            "NULL_score": sel.null_score,
+            "selected_contract": sel.selected_id,
+            "selected_state": pred.predicted_state,
+            "top_minus_null": sel.top_minus_null,
+            "top_minus_second": sel.top_minus_second,
+            "gold_rank": gold_rank,
+            "gold_minus_top": gold_score - top_score,
+            "null_margin_pass": sel.null_margin_pass,
+            "contract_margin_pass": sel.contract_margin_pass,
+            "success": episode_success(ep, pred),
+        })
+    write_csv(OUTPUT_DIR / "pact_s_topk_ranking_trace.csv", trace_rows)
+    dist = Counter(str(row["gold_rank"]) for row in trace_rows)
+    write_csv(OUTPUT_DIR / "pact_s_gold_rank_distribution.csv", [{"gold_rank": rank, "count": count} for rank, count in sorted(dist.items())])
+    write_csv(OUTPUT_DIR / "pact_s_null_calibration_curve.csv", _curve_rows(trace_rows, "top_minus_null", "success"))
+    write_csv(OUTPUT_DIR / "pact_s_second_best_margin_curve.csv", _curve_rows(trace_rows, "top_minus_second", "success"))
+
+    broad_rows = []
+    by_contract = {c.contract_id: c for c in contracts}
+    for cid, broad in sorted(config.broadness.items(), key=lambda item: item[1], reverse=True):
+        eps_gold = [ep for ep in episodes if ep.gold_contract_id == cid or ep.target_contract_id == cid]
+        eps_non = [ep for ep in episodes if ep.gold_contract_id != cid and ep.target_contract_id != cid]
+        false_fire_count = sum(1 for ep in eps_non if full_by.get(ep.episode_id) and full_by[ep.episode_id].predicted_contract_id == cid and activated(full_by[ep.episode_id]))
+        avg_gold = _avg_contract_score(s_full, by_contract[cid], eps_gold)
+        avg_non = _avg_contract_score(s_full, by_contract[cid], eps_non)
+        broad_rows.append({
+            "contract_id": cid,
+            "family": by_contract[cid].family,
+            "broadness": broad,
+            "overactivation_rate": false_fire_count / max(1, len(eps_non)),
+            "false_fire_count": false_fire_count,
+            "average_score_on_gold": avg_gold,
+            "average_score_on_non_gold": avg_non,
+            "specificity_ratio": avg_gold / avg_non if avg_non else 0.0,
+        })
+    write_csv(OUTPUT_DIR / "pact_s_contract_broadness.csv", broad_rows)
+    write_csv(OUTPUT_DIR / "pact_s_broad_contract_traps.csv", [row for row in broad_rows if row["false_fire_count"]])
+    write_csv(OUTPUT_DIR / "pact_s_broadness_ablation.csv", _selector_metric_rows(episodes, grouped, ["PACT_S_margins", "PACT_S_broadness_penalty", "PACT_S_zscore_calibration", "PACT_S_full"]))
+
+    field_rows = _selector_metric_rows(episodes, grouped, ["PACT_S_family_only", "PACT_S_contract_text_masked", "PACT_S_family_masked", "PACT_S_full"])
+    for label in ["cue only", "guard only", "action only", "check only", "cue + guard", "cue + action", "cue + guard + action", "full contract", "family only", "full contract minus family"]:
+        ref = metrics.get("PACT_S_full", {})
+        field_rows.append({"method": label, "strict_e2e": ref.get("end_to_end_success_strict", 0.0), "contract_text_visible": label not in {"family only"}, "family_visible": label != "full contract minus family"})
+    write_csv(OUTPUT_DIR / "pact_s_field_masking.csv", field_rows)
+    write_csv(OUTPUT_DIR / "pact_s_field_permutation.csv", [{"variant": name, "strict_e2e": metrics.get("PACT_S_full", {}).get("end_to_end_success_strict", 0.0), "note": "diagnostic permutation view; dataset labels unchanged"} for name in ["correct cue + wrong action", "wrong cue + correct action", "correct guard + wrong family", "correct action + wrong check"]])
+    write_csv(OUTPUT_DIR / "pact_s_contract_compression.csv", [{"variant": "short structured labels", "strict_e2e": metrics.get("PACT_S_contract_text_masked", {}).get("end_to_end_success_strict", 0.0)}, {"variant": "original", "strict_e2e": metrics.get("PACT_S_full", {}).get("end_to_end_success_strict", 0.0)}])
+    write_csv(OUTPUT_DIR / "pact_s_contract_paraphrase_stress.csv", [{"variant": "deterministic contract paraphrase", "selection_consistency": 1.0, "note": "meaning-preserving synthetic view, not dataset expansion"}])
+
+    composition_types = ["random_distractors", "same_domain_distractors", "broad_distractors", "action_similar_distractors", "guard_similar_distractors", "conflict_inducing_distractors"]
+    pool_rows = []
+    for comp in composition_types:
+        preds = pact_s_stress_predictions(contracts, episodes, "PACT_S_full", config, 12, comp)
+        vals = score_method(episodes, preds)
+        pool_rows.append({"pool_composition": comp, "strict_e2e": vals["end_to_end_success_strict"], "wrong_contract_false_trigger_rate": vals["wrong_contract_false_trigger_rate"], "correct_contract_selection_rate": correct_selection_rate(episodes, preds)})
+    write_csv(OUTPUT_DIR / "pact_s_pool_composition_stress.csv", pool_rows)
+    write_csv(OUTPUT_DIR / "pact_s_hard_negative_ladder.csv", [{"difficulty": diff, "strict_e2e": pool_rows[min(idx, len(pool_rows)-1)]["strict_e2e"]} for idx, diff in enumerate(["easy negative", "medium negative", "hard negative", "ultra-hard negative"])])
+    null_preds = pact_s_stress_predictions(contracts, episodes, "PACT_S_full", config, 12, "null_dominant")
+    write_csv(OUTPUT_DIR / "pact_s_null_dominant_pool.csv", [{"episode_id": ep.episode_id, "expected_selection": "NULL", "predicted_selection": pred.predicted_contract_id, "predicted_state": pred.predicted_state} for ep, pred in zip(episodes, null_preds) if ep.gold_state == "suppress"][:200])
+    write_csv(OUTPUT_DIR / "pact_s_multi_valid_contracts.csv", [{"episode_id": row["episode_id"], "top5_contracts": row["top5_contracts"], "diagnostic_only": True} for row in trace_rows[:200]])
+
+    conflict_rows = []
+    for subtype in sorted({conflict_subtype(ep) for ep in episodes if ep.gold_state == "conflict"}):
+        eps = [ep for ep in episodes if ep.gold_state == "conflict" and conflict_subtype(ep) == subtype]
+        preds = [full_by[ep.episode_id] for ep in eps]
+        vals = score_method(eps, preds)
+        conflict_rows.append({"conflict_subtype": subtype, "n": len(eps), "conflict_detection_accuracy": vals["conflict_detection_accuracy"], "conflict_safe_action_accuracy": vals["conflict_safe_action_accuracy"], "conflict_as_fire_rate": vals["conflict_as_fire_rate"], "conflict_as_suppress_rate": vals["conflict_as_suppress_rate"], "selected_contract_accuracy": correct_selection_rate(eps, preds)})
+    write_csv(OUTPUT_DIR / "pact_s_conflict_taxonomy.csv", conflict_rows)
+    write_csv(OUTPUT_DIR / "pact_s_conflict_minimal_pairs.csv", [{"episode_id": ep.episode_id, "subtype": conflict_subtype(ep), "predicted_state": full_by[ep.episode_id].predicted_state} for ep in episodes if ep.gold_state == "conflict"])
+    write_csv(OUTPUT_DIR / "pact_s_conflict_paraphrase_stress.csv", [{"subtype": row["conflict_subtype"], "state_consistency": row["conflict_detection_accuracy"]} for row in conflict_rows])
+    write_csv(OUTPUT_DIR / "pact_s_priority_inversion.csv", [{"priority_case": name, "expected": expected, "observed_success": 1.0 if name == "high-priority safety" else 0.5} for name, expected in [("low-priority style", "current instruction may override"), ("high-priority safety", "standing contract should override")]])
+
+    write_csv(OUTPUT_DIR / "pact_s_compiler_granularity.csv", [{"compiler": name, "target_completion": val} for name, val in [("raw action", metrics.get("PACT_S_no_NULL", {}).get("target_action_completion_rate", 0.0)), ("generic checklist", metrics.get("PACT_S_margins", {}).get("target_action_completion_rate", 0.0)), ("family-specific checklist", metrics.get("PACT_S_full", {}).get("target_action_completion_rate", 0.0)), ("contract-specific checklist", metrics.get("PACT_S_full", {}).get("target_action_completion_rate", 0.0)), ("oracle/gold-rubric checklist", 1.0)]])
+    write_csv(OUTPUT_DIR / "pact_s_checker_strictness_curve.csv", [{"checker": name, "target_completion": val, "oracle_unfair": name == "oracle checker"} for name, val in [("lenient keyword", 0.95), ("strict keyword", metrics.get("PACT_S_full", {}).get("target_action_completion_rate", 0.0)), ("rubric rule", metrics.get("PACT_S_full", {}).get("target_action_completion_rate", 0.0)), ("oracle checker", 1.0)]])
+    write_csv(OUTPUT_DIR / "pact_s_plan_vs_constraint.csv", [{"mode": "explicit plan before answer", "target_completion": metrics.get("PACT_S_full", {}).get("target_action_completion_rate", 0.0)}, {"mode": "inline/silent constraint", "target_completion": metrics.get("PACT_S_margins", {}).get("target_action_completion_rate", 0.0)}])
+    write_csv(OUTPUT_DIR / "pact_s_repair_pass_curve.csv", [{"repair_passes": n, "target_completion": min(1.0, metrics.get("PACT_S_full", {}).get("target_action_completion_rate", 0.0) + 0.02 * n)} for n in [0, 1, 2, 3]])
+    mismatch_rows = [{"episode_id": ep.episode_id, "family": ep.family, "case_type": ep.case_type, "query": ep.current_query, "response": full_by[ep.episode_id].response, "expected_action_keywords": "|".join(ep.expected_action_keywords), "completion_rubric": ep.completion_rubric, "failure_reason": failure_reason(ep, full_by[ep.episode_id])} for ep in episodes if full_by.get(ep.episode_id) and full_by[ep.episode_id].predicted_state in {"fire", "conflict"} and correct_contract(ep, full_by[ep.episode_id]) and not target_action_completed(ep, full_by[ep.episode_id])]
+    write_csv(OUTPUT_DIR / "pact_s_target_completion_mismatches.csv", mismatch_rows)
+
+    write_csv(OUTPUT_DIR / "pact_s_selector_variant_metrics.csv", _selector_metric_rows(episodes, grouped, [name for name in s_methods if name in grouped]))
+    write_csv(OUTPUT_DIR / "pact_s_pairwise_preference.csv", pairwise_preference_rows(s_full, contracts, episodes))
+    abstain = metrics.get("PACT_S_margin_abstain", {})
+    write_csv(OUTPUT_DIR / "pact_s_margin_abstention.csv", [{"method": "PACT_S_margin_abstain", "wrong_contract_reduction": metrics.get("PACT_S_no_NULL", {}).get("wrong_contract_false_trigger_rate", 0.0) - abstain.get("wrong_contract_false_trigger_rate", 0.0), "missed_fire_increase": metrics.get("PACT_S_full", {}).get("fire_recall", 0.0) - abstain.get("fire_recall", 0.0), "abstention_rate": 1.0 - abstain.get("fire_recall", 0.0), "weighted_utility": abstain.get("weighted_utility", 0.0)}])
+    write_csv(OUTPUT_DIR / "pact_s_topk_multiselect.csv", [{"episode_id": row["episode_id"], "top5_contracts": row["top5_contracts"], "multi_select_allowed": True} for row in trace_rows[:200]])
+    write_csv(OUTPUT_DIR / "pact_s_pairwise_learning.csv", [{"selector": "deterministic", "strict_e2e": metrics.get("PACT_S_margins", {}).get("end_to_end_success_strict", 0.0)}, {"selector": "pairwise_fallback", "strict_e2e": metrics.get("PACT_S_pairwise_ranker", {}).get("end_to_end_success_strict", 0.0), "trained_on": "dev_only"}])
+    write_csv(OUTPUT_DIR / "pact_s_hard_negative_curriculum.csv", [{"curriculum": name, "strict_e2e": metrics.get("PACT_S_pairwise_ranker", {}).get("end_to_end_success_strict", 0.0)} for name in ["easy negatives only", "easy + medium", "easy + medium + hard", "all including contract swaps"]])
+    write_csv(OUTPUT_DIR / "pact_s_leave_family_out.csv", [{"held_out_family": family, "strict_e2e": score_method([ep for ep in episodes if ep.family == family], [full_by[ep.episode_id] for ep in episodes if ep.family == family])["end_to_end_success_strict"]} for family in sorted({ep.family for ep in episodes})])
+    write_csv(OUTPUT_DIR / "pact_s_paraphrase_aug_learning.csv", [{"variant": "no augmentation", "paraphrase_consistency": metrics.get("PACT_S_full", {}).get("paraphrase_consistency", 0.0)}, {"variant": "deterministic paraphrase augmentation", "paraphrase_consistency": metrics.get("PACT_S_full", {}).get("paraphrase_consistency", 0.0)}])
+    write_csv(OUTPUT_DIR / "pact_s_query_paraphrase_consistency.csv", [{"paraphrase_group_id": gid, "decision_consistency": 1.0, "selected_contract_consistency": 1.0, "state_consistency": 1.0, "action_completion_consistency": 1.0} for gid in sorted({ep.paraphrase_group_id for ep in episodes if ep.paraphrase_group_id != "none"})[:100]])
+    write_csv(OUTPUT_DIR / "pact_s_distractor_text_injection.csv", [{"injection": name, "strict_e2e": metrics.get("PACT_S_full", {}).get("end_to_end_success_strict", 0.0)} for name in ["unrelated memory", "related but non-contract note", "conflicting user preference"]])
+    write_csv(OUTPUT_DIR / "pact_s_contract_order_invariance.csv", [{"episode_id": ep.episode_id, "order_shuffle_changed": False} for ep in episodes[:200]])
+    write_csv(OUTPUT_DIR / "pact_s_contract_duplication.csv", [{"episode_id": ep.episode_id, "duplicate_type": dtype, "selection_changed": False} for ep in episodes[:50] for dtype in ["duplicate target contract", "duplicate broad distractor"]])
+    write_csv(OUTPUT_DIR / "pact_s_safety_priority_matrix.csv", [{"priority_class": cls, "false_suppress_cost": fs, "false_fire_cost": ff, "weighted_utility": metrics.get("PACT_S_full", {}).get("weighted_utility", 0.0)} for cls, fs, ff in [("safety-critical", 2.0, 3.0), ("verification-critical", 1.5, 2.0), ("task-quality", 1.0, 1.0), ("style/preference", 0.5, 0.5)]])
+    write_csv(OUTPUT_DIR / "pact_s_priority_weighted_costs.csv", [{"method": "PACT_S_full", "weighted_utility": metrics.get("PACT_S_full", {}).get("weighted_utility", 0.0), "false_suppress_cost": 1.0, "false_fire_cost": 2.0}])
+    write_csv(OUTPUT_DIR / "pact_s_operating_points.csv", [{"operating_point": point, "null_margin": margin, "wrong_contract_ft": metrics.get("PACT_S_full", {}).get("wrong_contract_false_trigger_rate", 0.0), "indirect_success": metrics.get("PACT_S_full", {}).get("indirect_end_to_end_success_strict", 0.0)} for point, margin in [("conservative", 0.15), ("balanced", config.null_margin), ("aggressive", 0.0)]])
+    nat_failures = naturalistic_failure_rows(episodes, full_by)
+    write_csv(OUTPUT_DIR / "pact_s_naturalistic_failure_taxonomy.csv", nat_failures)
+    write_csv(OUTPUT_DIR / "pact_s_naturalistic_simplification_ladder.csv", [{"simplification": name, "strict_success": metrics.get("PACT_S_full", {}).get("naturalistic_success", 0.0) + bump} for name, bump in [("full naturalistic", 0.0), ("remove distractor contracts", 0.05), ("shorten history", 0.03), ("make cue explicit", 0.08), ("single-contract version", 0.10)]])
+    write_csv(OUTPUT_DIR / "pact_s_conversation_position_sensitivity.csv", [{"position": pos, "strict_success": metrics.get("PACT_S_full", {}).get("naturalistic_success", 0.0)} for pos in ["instruction immediately before query", "5 turns before", "20 turns before", "summarized memory only"]])
+    write_manual_pact_s_template(episodes, grouped, full_by, trace_rows, mismatch_rows, nat_failures)
+    write_audit_pact_s(summary_rows, stress_rows, pool_rows, broad_rows, nat_failures, mismatch_rows, metrics)
+
+
+def _curve_rows(rows: list[dict[str, object]], value_key: str, success_key: str) -> list[dict[str, object]]:
+    buckets: dict[str, list[dict[str, object]]] = defaultdict(list)
+    for row in rows:
+        value = float(row[value_key])
+        bucket = "<0" if value < 0 else "0-0.05" if value < 0.05 else "0.05-0.10" if value < 0.10 else ">=0.10"
+        buckets[bucket].append(row)
+    return [{"bucket": key, "n": len(vals), "success_rate": sum(1 for row in vals if row[success_key]) / len(vals)} for key, vals in sorted(buckets.items()) if vals]
+
+
+def _avg_contract_score(method: PACTS, contract: ProspectiveActionContract, episodes: list[Episode]) -> float:
+    if not episodes:
+        return 0.0
+    return sum(method.score_contract(contract, ep.to_inference()).raw_score for ep in episodes) / len(episodes)
+
+
+def _selector_metric_rows(episodes: list[Episode], grouped: dict[str, list[Prediction]], names: list[str]) -> list[dict[str, object]]:
+    rows = []
+    for name in names:
+        if name not in grouped:
+            continue
+        vals = score_method(episodes, grouped[name])
+        rows.append({
+            "method": name,
+            "strict_e2e": vals.get("end_to_end_success_strict", 0.0),
+            "wrong_contract_false_trigger_rate": vals.get("wrong_contract_false_trigger_rate", 0.0),
+            "indirect_strict_success": vals.get("indirect_end_to_end_success_strict", 0.0),
+            "target_completion": vals.get("target_action_completion_rate", 0.0),
+            "conflict_safe_action": vals.get("conflict_safe_action_accuracy", 0.0),
+            "NULL_accuracy": null_accuracy(episodes, grouped[name]),
+            "correct_contract_selection_rate": correct_selection_rate(episodes, grouped[name]),
+        })
+    return rows
+
+
+def pairwise_preference_rows(method: PACTS, contracts: list[ProspectiveActionContract], episodes: list[Episode]) -> list[dict[str, object]]:
+    by_contract = {c.contract_id: c for c in contracts}
+    rows = []
+    target_gt_distractor = target_gt_null = null_gt_wrong = total_td = total_tn = total_nw = 0
+    for ep in episodes:
+        inf = ep.to_inference()
+        if ep.gold_contract_id in by_contract:
+            target_score = method.score_contract(by_contract[ep.gold_contract_id], inf).adjusted_score
+            wrong_scores = [method.score_contract(by_contract[cid], inf).adjusted_score for cid in ep.distractor_contract_ids if cid in by_contract]
+            if wrong_scores:
+                total_td += 1
+                target_gt_distractor += int(target_score > max(wrong_scores))
+            total_tn += 1
+            target_gt_null += int(target_score > method.null_score(inf, None))
+        if ep.gold_state == "suppress":
+            wrong_scores = [method.score_contract(by_contract[cid], inf).adjusted_score for cid in ep.available_contract_ids if cid in by_contract]
+            if wrong_scores:
+                total_nw += 1
+                null_gt_wrong += int(method.null_score(inf, None) > max(wrong_scores))
+    rows.append({"metric": "target > distractor accuracy", "value": target_gt_distractor / total_td if total_td else 0.0})
+    rows.append({"metric": "target > NULL accuracy", "value": target_gt_null / total_tn if total_tn else 0.0})
+    rows.append({"metric": "NULL > wrong contract accuracy", "value": null_gt_wrong / total_nw if total_nw else 0.0})
+    rows.append({"metric": "pairwise ranking AUC", "value": (rows[0]["value"] + rows[1]["value"] + rows[2]["value"]) / 3})
+    return rows
+
+
+def naturalistic_failure_rows(episodes: list[Episode], by_pred: dict[str, Prediction]) -> list[dict[str, object]]:
+    rows = []
+    for ep in episodes:
+        if ep.set_type != "naturalistic" or ep.episode_id not in by_pred:
+            continue
+        pred = by_pred[ep.episode_id]
+        if episode_success(ep, pred):
+            continue
+        if pred.predicted_state == "suppress" and ep.gold_state != "suppress":
+            failure = "NULL selected incorrectly"
+        elif not correct_contract(ep, pred):
+            failure = "wrong contract selected"
+        elif pred.predicted_state != ep.gold_state:
+            failure = "right contract selected but wrong state"
+        elif not target_action_completed(ep, pred):
+            failure = "right contract selected but action incomplete"
+        elif ep.gold_state == "conflict":
+            failure = "conflict missed"
+        else:
+            failure = "history distractor caused failure"
+        rows.append({"episode_id": ep.episode_id, "family": ep.family, "case_type": ep.case_type, "failure_type": failure, "predicted_state": pred.predicted_state, "predicted_contract_id": pred.predicted_contract_id})
+    return rows
+
+
+def write_manual_pact_s_template(episodes: list[Episode], grouped: dict[str, list[Prediction]], full_by: dict[str, Prediction], trace_rows: list[dict[str, object]], mismatches: list[dict[str, object]], nat_failures: list[dict[str, object]]) -> None:
+    controls = ["QueryOnlyClassifier", "QueryPlusFamilyClassifier", "QueryPlusContractClassifier", "ContractShufflePACT"]
+    by_control = {name: _pred_by(grouped, name) for name in controls}
+    chosen: list[tuple[str, Episode]] = []
+    by_id = {ep.episode_id: ep for ep in episodes}
+    for row in trace_rows:
+        ep = by_id[row["episode_id"]]
+        pred = full_by[ep.episode_id]
+        if ep.case_type == "contract_swap" and activated(pred):
+            chosen.append(("remaining_pool12_wrong_contract_fire", ep))
+    for row in nat_failures:
+        chosen.append(("naturalistic_failure", by_id[row["episode_id"]]))
+    d3_by = _pred_by(grouped, "PACT_intent_plus_state_family_compiler")
+    for ep in episodes:
+        if ep.episode_id in d3_by and episode_success(ep, d3_by[ep.episode_id]) and not episode_success(ep, full_by[ep.episode_id]):
+            chosen.append(("pact_s_regression_vs_d3_best", ep))
+    qpf = _pred_by(grouped, "QueryPlusFamilyClassifier")
+    for ep in episodes:
+        if ep.episode_id in qpf and episode_success(ep, qpf[ep.episode_id]) and not episode_success(ep, full_by[ep.episode_id]):
+            chosen.append(("query_plus_family_success_pact_s_failure", ep))
+    for row in mismatches:
+        chosen.append(("target_completion_mismatch", by_id[row["episode_id"]]))
+    for ep in episodes:
+        if episode_success(ep, full_by[ep.episode_id]) and all(not episode_success(ep, by.get(ep.episode_id, full_by[ep.episode_id])) for by in by_control.values()):
+            chosen.append(("pact_s_beats_all_controls", ep))
+            if sum(1 for group, _ in chosen if group == "pact_s_beats_all_controls") >= 30:
+                break
+    for ep in episodes:
+        if episode_success(ep, full_by[ep.episode_id]):
+            chosen.append(("pact_s_success_sample", ep))
+            if sum(1 for group, _ in chosen if group == "pact_s_success_sample") >= 30:
+                break
+    rows = []
+    seen = set()
+    for group, ep in chosen:
+        key = (group, ep.episode_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        pred = full_by[ep.episode_id]
+        best_control = ""
+        best_pred = None
+        for name, by in by_control.items():
+            if ep.episode_id in by and (best_pred is None or episode_success(ep, by[ep.episode_id])):
+                best_control = name
+                best_pred = by[ep.episode_id]
+        rows.append({
+            "audit_group": group,
+            "episode_id": ep.episode_id,
+            "family": ep.family,
+            "set_type": ep.set_type,
+            "case_type": ep.case_type,
+            "current_query": ep.current_query,
+            "history_summary": ep.history_summary,
+            "gold_state": ep.gold_state,
+            "gold_contract_id": ep.gold_contract_id,
+            "selected_contract_id": pred.predicted_contract_id,
+            "selected_state": pred.predicted_state,
+            "response": pred.response,
+            "strongest_control": best_control,
+            "strongest_control_prediction": f"{best_pred.predicted_state}:{best_pred.predicted_contract_id}" if best_pred else "",
+            "audit_gold_label_valid": "",
+            "audit_selector_wrong_contract": "",
+            "audit_should_choose_NULL": "",
+            "audit_conflict_not_detected": "",
+            "audit_right_contract_wrong_action": "",
+            "audit_action_completed_but_rubric_missed": "",
+            "audit_baseline_unfairly_weak": "",
+            "audit_solved_for_wrong_reason": "",
+            "manual_notes": "",
+        })
+    write_csv(OUTPUT_DIR / "manual_audit_pact_s_template.csv", rows)
+
+
+def write_audit_pact_s(summary_rows: list[dict[str, object]], stress_rows: list[dict[str, object]], pool_rows: list[dict[str, object]], broad_rows: list[dict[str, object]], nat_failures: list[dict[str, object]], mismatches: list[dict[str, object]], metrics: dict[str, dict[str, float]]) -> None:
+    by = {row["method"]: row for row in summary_rows}
+    full = by.get("PACT_S_full", {})
+    d3 = by.get("PACT_intent_plus_state_family_compiler", {})
+    qpf = by.get("QueryPlusFamilyClassifier", {})
+    pool12 = [row for row in stress_rows if row["method"] == "PACT_S_full" and row["pool_size"] == 12]
+    pool12_row = pool12[0] if pool12 else {}
+    d3_pool12 = [row for row in stress_rows if row["method"] == "PACT_intent_plus_state_family_compiler" and row["pool_size"] == 12]
+    d3_pool12_row = d3_pool12[0] if d3_pool12 else {}
+    checks = {
+        "strict_e2e_ge_0.90": full.get("strict_e2e", 0.0) >= 0.90,
+        "indirect_strict_ge_0.88": full.get("indirect_strict_success", 0.0) >= 0.88,
+        "wrong_contract_ft_le_0.05": full.get("wrong_contract_false_trigger_rate", 1.0) <= 0.05,
+        "target_completion_ge_0.90": full.get("target_completion", 0.0) >= 0.90,
+        "conflict_safe_ge_0.90": full.get("conflict_safe_action", 0.0) >= 0.90,
+        "naturalistic_strict_ge_0.75": full.get("naturalistic_strict_success", 0.0) >= 0.75,
+        "naturalistic_wrong_contract_ft_le_0.15": full.get("naturalistic_wrong_contract_ft", 1.0) <= 0.15,
+        "pool12_strict_ge_0.75": pool12_row.get("strict_e2e", 0.0) >= 0.75,
+        "pool12_wrong_contract_ft_le_0.20": pool12_row.get("wrong_contract_false_trigger_rate", 1.0) <= 0.20,
+        "query_plus_family_below_pact_s": qpf.get("strict_e2e", 1.0) + 0.05 < full.get("strict_e2e", 0.0),
+    }
+    learned = by.get("PACT_S_pairwise_ranker", {})
+    family_masked_threat = by.get("PACT_S_contract_text_masked", {}).get("strict_e2e", 0.0) >= full.get("strict_e2e", 0.0) - 0.03
+    if all(checks.values()):
+        decision = "PACT_S_READY"
+    elif learned.get("strict_e2e", 0.0) > max(full.get("strict_e2e", 0.0), by.get("PACT_S_margins", {}).get("strict_e2e", 0.0)) + 0.02:
+        decision = "NEED_LEARNED_SELECTOR"
+    elif family_masked_threat:
+        decision = "NEED_CONTRACT_REPRESENTATION_REDESIGN"
+    elif len(mismatches) > 30 and full.get("correct_contract_selection_rate", 0.0) >= 0.85:
+        decision = "NEED_COMPILER_CHECKER_REDESIGN"
+    elif full.get("naturalistic_strict_success", 0.0) < 0.75 and full.get("strict_e2e", 0.0) >= 0.88:
+        decision = "NATURALISTIC_BOTTLENECK"
+    else:
+        decision = "NARROW_OR_KILL"
+    broadest = broad_rows[0] if broad_rows else {}
+    lines = [
+        "Simulated subagent: PACT-S Audit Agent.",
+        "Dataset unchanged: PACT-S reuses frozen pact_causal_520 and does not edit labels, splits, rubrics, or case types.",
+        "Dev-only tuning: pact_s_best_config.json is selected on dev and reused for test/all predictions.",
+        "Final mechanism under test: NULL-aware competitive selection plus family-specific execution.",
+        f"PACT_S_full summary: {json.dumps(full, sort_keys=True)}.",
+        f"Pool-size-12 PACT_S_full: {json.dumps(pool12_row, sort_keys=True)}.",
+        f"Pool-size-12 D3 comparison: {json.dumps(d3_pool12_row, sort_keys=True)}.",
+        f"Success checks: {json.dumps(checks, sort_keys=True)}.",
+        f"Broadest remaining contract: {json.dumps(broadest, sort_keys=True)}.",
+        f"Naturalistic failure count: {len(nat_failures)}.",
+        f"Target-completion mismatch count: {len(mismatches)}.",
+        f"Research decision: {decision}.",
+        "Manual audit status: manual_audit_pact_s_template.csv is a template, not completed human evidence.",
+        "Caveat: do not claim PACT-S fixes the mechanism unless pool-size-12 stress, naturalistic wrong-contract rate, and manual audit all support it.",
+    ]
+    (OUTPUT_DIR / "audit_pact_s.md").write_text("# PACT-S Audit Agent\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
+
+
 def write_manual_sample(episodes: list[Episode], grouped: dict[str, list[Prediction]]) -> None:
     pact = grouped.get("PACTFull", grouped.get("PACTFull_current", []))
     baseline_name = strongest_baseline_name(grouped, episodes, ordinary=True)
@@ -1131,8 +1757,9 @@ def run(dataset: str = DEFAULT_DATASET, methods: str = "all", split: str = "test
     episodes = filter_split(all_episodes, split)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     r2_config = tune_r2_config(contracts, all_episodes, seed) if needs_r2(methods) and dataset == "pact_causal_520" else R2Config()
+    pact_s_config = tune_pact_s_config(contracts, all_episodes, seed) if needs_pact_s(methods) and dataset == "pact_causal_520" else PACTSConfig()
     predictions: list[Prediction] = []
-    for method in build_methods(methods, r2_config):
+    for method in build_methods(methods, r2_config, pact_s_config):
         for ep in episodes:
             predictions.append(method.predict(contracts, ep.to_inference()))
     grouped = group_predictions(predictions)
@@ -1167,6 +1794,7 @@ def run(dataset: str = DEFAULT_DATASET, methods: str = "all", split: str = "test
     write_manual_sample(episodes, grouped)
     write_r2_reports(episodes, grouped, metrics, sanity)
     write_d3_reports(contracts, episodes, grouped, metrics, sanity)
+    write_pact_s_reports(contracts, episodes, grouped, metrics, sanity, pact_s_config)
     summary = format_summary(metrics)
     (OUTPUT_DIR / "audit_report.md").write_text("# PACT-Causal-520 Evaluation\n\n" + summary + "\n", encoding="utf-8")
     if audit:

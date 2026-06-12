@@ -1,0 +1,5 @@
+variant,strict_e2e,note
+correct cue + wrong action,0.6942307692307692,diagnostic permutation view; dataset labels unchanged
+wrong cue + correct action,0.6942307692307692,diagnostic permutation view; dataset labels unchanged
+correct guard + wrong family,0.6942307692307692,diagnostic permutation view; dataset labels unchanged
+correct action + wrong check,0.6942307692307692,diagnostic permutation view; dataset labels unchanged

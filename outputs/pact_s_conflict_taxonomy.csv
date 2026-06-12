@@ -1,0 +1,6 @@
+conflict_subtype,n,conflict_detection_accuracy,conflict_safe_action_accuracy,conflict_as_fire_rate,conflict_as_suppress_rate,selected_contract_accuracy
+current_fact_verification_conflict,7,0.2857142857142857,0.42857142857142855,0.14285714285714285,0.5714285714285714,0.42857142857142855
+medical_or_legal_certainty_conflict,9,0.2222222222222222,0.5555555555555556,0.4444444444444444,0.3333333333333333,0.5555555555555556
+multi_contract_conflict,10,0.0,0.1,0.1,0.9,0.1
+skip_safety_or_verification,9,0.6666666666666666,0.6666666666666666,0.0,0.3333333333333333,0.6666666666666666
+unsafe_recommendation_conflict,5,0.2,0.6,0.6,0.2,0.6

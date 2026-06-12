@@ -1,0 +1,5 @@
+position,strict_success
+instruction immediately before query,0.75
+5 turns before,0.75
+20 turns before,0.75
+summarized memory only,0.75

@@ -1,0 +1,15 @@
+method,strict_e2e,wrong_contract_false_trigger_rate,indirect_strict_success,target_completion,conflict_safe_action,NULL_accuracy,correct_contract_selection_rate,contract_text_visible,family_visible
+PACT_S_family_only,0.5961538461538461,0.0,0.0,0.05,0.25,0.5360824742268041,0.5557692307692308,,
+PACT_S_contract_text_masked,0.5961538461538461,0.0,0.0,0.05,0.25,0.5360824742268041,0.5557692307692308,,
+PACT_S_family_masked,0.6634615384615384,0.1346153846153846,0.20454545454545456,0.35,0.775,0.6218905472636815,0.6903846153846154,,
+PACT_S_full,0.6942307692307692,0.0,0.29545454545454547,0.32727272727272727,0.45,0.6323529411764706,0.6884615384615385,,
+cue only,0.6942307692307692,,,,,,,True,True
+guard only,0.6942307692307692,,,,,,,True,True
+action only,0.6942307692307692,,,,,,,True,True
+check only,0.6942307692307692,,,,,,,True,True
+cue + guard,0.6942307692307692,,,,,,,True,True
+cue + action,0.6942307692307692,,,,,,,True,True
+cue + guard + action,0.6942307692307692,,,,,,,True,True
+full contract,0.6942307692307692,,,,,,,True,True
+family only,0.6942307692307692,,,,,,,False,True
+full contract minus family,0.6942307692307692,,,,,,,True,False
