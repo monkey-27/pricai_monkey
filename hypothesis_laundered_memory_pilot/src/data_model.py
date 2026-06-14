@@ -4,8 +4,19 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 
-Domain = Literal["coding", "data_analysis"]
-Method = Literal["no_memory", "naive", "reflection", "evidence_labeled"]
+Domain = Literal["coding", "data_analysis", "research_assistant"]
+CaseSubtype = Literal["false_hypothesis", "verified_hypothesis", "ambiguous_hypothesis"]
+Method = Literal[
+    "no_memory",
+    "naive",
+    "reflection",
+    "source_aware",
+    "quote_required",
+    "evidence_labeled",
+    "evidence_labeled_no_enforcement",
+    "evidence_labeled_stable_only",
+    "evidence_labeled_enforced",
+]
 
 
 @dataclass
@@ -44,6 +55,9 @@ class BenchmarkItem:
     ground_truth: str
     future_task: FutureTask
     verified_memory_control: VerifiedMemoryControl
+    case_subtype: CaseSubtype = "false_hypothesis"
+    confirmed_hypothesis: str = ""
+    verification_evidence: str = ""
     trap_is_later_verified: bool = False
 
     @classmethod
@@ -57,6 +71,9 @@ class BenchmarkItem:
             ground_truth=data["ground_truth"],
             future_task=FutureTask(**data["future_task"]),
             verified_memory_control=VerifiedMemoryControl(**data["verified_memory_control"]),
+            case_subtype=data.get("case_subtype", "false_hypothesis"),
+            confirmed_hypothesis=data.get("confirmed_hypothesis", ""),
+            verification_evidence=data.get("verification_evidence", ""),
             trap_is_later_verified=bool(data.get("trap_is_later_verified", False)),
         )
 
@@ -85,10 +102,12 @@ class ScoreRecord:
     control_task_correct: bool
     useful_memory_retention: bool
     mixed: bool
+    downstream_label: str = "unparseable"
+    confirmed_hypothesis_promoted: bool = False
+    tentative_overblocked: bool = False
     memories: list[dict[str, Any]] = field(default_factory=list)
     trap_answer: str = ""
     control_answer: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-

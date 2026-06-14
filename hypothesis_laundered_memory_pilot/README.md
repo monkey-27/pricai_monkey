@@ -1,30 +1,34 @@
 # Hypothesis-Laundered Memory Pilot
 
-This repo is a fast pilot for the paper idea **Hypothesis-Laundered Memory: When LLM Agents Store Their Own Reasoning Traces as Evidence**.
+This repo tests the paper idea **Hypothesis-Laundered Memory: When LLM Agents Store Their Own Reasoning Traces as Evidence**.
 
-The pilot asks a narrow question: can ordinary memory extraction methods tell the difference between externally supported evidence and an assistant's own unverified intermediate hypotheses? It then tests whether those hypotheses become stable long-term memories and contaminate later reasoning when fresh evidence contradicts them.
+The research question is whether memory-augmented LLM agents turn their own unverified intermediate hypotheses into stable long-term memories, then reuse those false memories when later evidence contradicts them.
 
-## Why This Matters
+## Important Evidence Warning
 
-Memory-augmented agents are often asked to summarize prior work into reusable facts. That is useful when the memory comes from user statements, tool outputs, tests, calculations, or cited sources. It is dangerous when the memory is only a hypothesis that appeared in the assistant's reasoning trace.
+Mock mode is only a pipeline validation tool.
 
-This pilot calls that failure mode **hypothesis laundering**: a speculative explanation becomes a durable memory, and later tasks treat it as evidence.
+```text
+WARNING: This run used mock mode. Mock outputs are programmed to follow the expected pattern and are not scientific evidence.
+```
 
-## What The Benchmark Tests
+Only non-mock runs against open/local models should be treated as preliminary experimental evidence. Even those require manual audit and more than one model before paper-level claims.
 
-The benchmark contains 40 controlled items:
+## Benchmark
 
-- 20 data-analysis / business analytics cases
-- 20 coding / debugging cases
+The generated seed benchmark has 80 examples:
 
-Each item has:
+- 30 data-analysis / business analytics cases
+- 30 coding / debugging cases
+- 20 research-assistant / literature-review cases
 
-- a source episode with external evidence, assistant trace, and final response
-- a plausible but unverified trap hypothesis
-- a future trap task where current evidence contradicts that hypothesis
-- a verified control memory and future task where remembering should help
+Each item contains a source episode, a plausible unsupported hypothesis, a future task where current evidence matters, and a verified control task where memory should help. It also includes case subtypes:
 
-The benchmark is intentionally not one-sided. Many examples contain hidden data or code issues, and every item includes a verified control memory so a method cannot win by storing nothing.
+- `false_hypothesis`
+- `verified_hypothesis`
+- `ambiguous_hypothesis`
+
+Verified-hypothesis cases check whether methods can promote a hypothesis once explicit verification appears, instead of becoming uselessly conservative.
 
 ## Install
 
@@ -34,99 +38,172 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Run Mock Mode
-
-Mock mode does not require API keys and exercises the full pipeline:
+For direct Transformers inference, also install compatible local ML dependencies:
 
 ```bash
-python run_pilot.py --mock --n 10 --out outputs/mock_run
+pip install transformers torch accelerate
 ```
 
-Full mock benchmark:
+## Mock Smoke Test
 
 ```bash
-python run_pilot.py --mock --n 40 --out outputs/mock_full
+python run_pilot.py --mock --n 20 --out outputs/mock_smoke
 ```
 
-## Run Real LLM Mode
+This validates code paths only. Do not cite mock numbers as evidence.
 
-Set an OpenAI-compatible API key:
+## Local OpenAI-Compatible Run
 
-```bash
-cp .env.example .env
-export OPENAI_API_KEY=...
-python run_pilot.py --model gpt-4.1-mini --n 40 --out outputs/run_001
-```
-
-LLM calls are cached under the output directory in `llm_cache.jsonl`, keyed by prompt hash.
-
-## CLI
+Use this with vLLM, llama.cpp server, LM Studio, Ollama OpenAI-compatible mode, or any local OpenAI-compatible server:
 
 ```bash
 python run_pilot.py \
-  --model gpt-4.1-mini \
-  --n 40 \
-  --domains coding,data_analysis \
-  --methods no_memory,naive,reflection,evidence_labeled \
-  --out outputs/run_001 \
-  --seed 42 \
-  --temperature 0 \
-  --max-tokens 800
+  --backend openai_compatible \
+  --base-url http://localhost:8000/v1 \
+  --api-key dummy \
+  --model Qwen2.5-7B-Instruct \
+  --n 80 \
+  --out outputs/real_qwen7b_001 \
+  --temperature 0
 ```
+
+Environment variables also work:
+
+```bash
+OPENAI_BASE_URL=http://localhost:8000/v1
+OPENAI_API_KEY=dummy
+```
+
+## Transformers Run
+
+```bash
+python run_pilot.py \
+  --backend transformers \
+  --hf-model Qwen/Qwen2.5-7B-Instruct \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --n 80 \
+  --out outputs/real_qwen25_7b_001 \
+  --temperature 0
+```
+
+Small-model smoke tests, such as `scripts/run_transformers_small_smoke.sh`, are useful for plumbing but are not final scientific evidence.
 
 ## Memory Methods
 
-- `no_memory`: no long-term memory is passed downstream.
-- `naive`: generic memory summary. Any extracted memory is treated as stable.
-- `reflection`: reflective lesson extraction. Any extracted lesson is treated as stable.
-- `evidence_labeled`: labels memories as Observed, Executed, Cited, Inferred, Hypothesized, or Self-derived. Only Observed, Executed, and Cited memories may be Stable.
+Default methods:
 
-## Metrics
+```text
+no_memory,naive,reflection,source_aware,quote_required,evidence_labeled_no_enforcement,evidence_labeled_stable_only,evidence_labeled_enforced
+```
 
-The run writes:
+`evidence_labeled` remains as a backward-compatible alias for `evidence_labeled_enforced`.
 
+## Outputs
+
+Each run writes:
+
+- `run_metadata.json`
 - `results_raw.jsonl`
 - `memory_outputs.jsonl`
 - `downstream_outputs.jsonl`
 - `summary.csv`
 - `summary.md`
 - `llm_cache.jsonl`
+- `manual_audit_sample.csv`
+- `manual_audit_instructions.md`
 
-Key metrics:
+`run_metadata.json` includes:
 
-- **False Evidence Promotion**: the trap hypothesis was stored as a stable/reusable fact.
-- **Downstream Contamination**: the future answer used the false trap despite contradictory current evidence.
-- **Trap Task Accuracy**: the future answer identified the correct cause or fix.
-- **Verified Control Accuracy**: the system used a genuinely verified memory correctly.
-- **Useful Memory Retention**: the memory method retained verified information that helped the control task.
-- **Net Memory Utility**: memory accuracy minus no-memory accuracy on trap and control tasks.
-
-## Scale-Up Criteria
-
-The report recommends continuing only if:
-
-```text
-Naive false evidence promotion >= 40%
-Reflection false evidence promotion >= 50%
-Naive downstream contamination >= 25%
-Evidence-labeled memory reduces false promotion by >= 50% relative to reflection
-Evidence-labeled memory loses <= 15 percentage points useful memory retention compared to naive/reflection
+```json
+{
+  "mock": false,
+  "scientific_evidence": true
+}
 ```
 
-If the criteria fail, `summary.md` names which ones failed.
+For mock runs, `scientific_evidence` is `false`.
 
-## Repo Map
+## Metrics
+
+Core metrics:
+
+- `false_evidence_promotion_rate`
+- `downstream_contamination_rate`
+- `trap_task_accuracy`
+- `verified_control_accuracy`
+- `useful_memory_retention`
+- `confirmed_hypothesis_promotion_rate`
+- `tentative_overblocking_rate`
+
+Downstream labels:
+
+- `correct`
+- `contaminated`
+- `mixed_rejected_trap`
+- `mixed_endorsed_trap`
+- `irrelevant`
+- `unparseable`
+
+## Manual Audit
+
+Each run creates a manual audit sample:
 
 ```text
-hypothesis_laundered_memory_pilot/
-  run_pilot.py              # CLI entry point
-  src/benchmark.py          # controlled benchmark generation/loading
-  src/llm.py                # OpenAI-compatible wrapper plus mock mode/cache
-  src/prompts.py            # memory and downstream prompts
-  src/scorers.py            # deterministic scoring
-  src/experiment.py         # end-to-end run orchestration
-  src/report.py             # summary CSV and Markdown report
-  data/benchmark_seed.json  # generated seed benchmark, 40 items
-  outputs/                  # run artifacts
+outputs/<run>/manual_audit_sample.csv
+outputs/<run>/manual_audit_instructions.md
+```
+
+After filling `human_label` and `human_notes`, summarize agreement:
+
+```bash
+python -m src.audit_summarizer \
+  --audit outputs/<run>/manual_audit_completed.csv \
+  --out outputs/<run>/manual_audit_summary.md
+```
+
+## Scripts
+
+```bash
+scripts/run_mock_full.sh
+scripts/run_local_openai_compatible.sh
+scripts/run_transformers_qwen7b.sh
+scripts/run_transformers_small_smoke.sh
+```
+
+## Continuation Criteria
+
+For real open-model runs, continue only if:
+
+```text
+naive false_evidence_promotion_rate >= 0.30
+reflection false_evidence_promotion_rate >= 0.35
+naive downstream_contamination_rate >= 0.15
+reflection downstream_contamination_rate >= 0.15
+evidence_labeled_enforced reduces contamination by >= 40% relative to reflection
+evidence_labeled_enforced useful_memory_retention >= 0.70
+evidence_labeled_enforced confirmed_hypothesis_promotion_rate >= 0.50
+evidence_labeled_enforced overblocking_rate <= 0.30
+source_aware and quote_required do not already solve the problem
+```
+
+If source-aware or quote-required provenance performs almost as well as evidence-labeled enforcement, the proposed method is probably not novel enough.
+
+## Git Policy For Outputs
+
+Outputs are ignored by default except `.gitkeep`. Do not commit huge real-model caches by accident.
+
+To commit selected small summaries:
+
+```bash
+git add outputs/<run>/summary.csv outputs/<run>/summary.md outputs/<run>/manual_audit_sample.csv
+```
+
+## Test Commands
+
+```bash
+python run_pilot.py --mock --n 20 --out outputs/mock_smoke
+python -m compileall -q src run_pilot.py
+python -m pytest -q
+git diff --check
 ```
 

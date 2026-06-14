@@ -1,2 +1,7 @@
 openai>=1.40.0
+pytest>=8.0.0
 
+# Optional for --backend transformers:
+# transformers>=4.45.0
+# torch
+# accelerate

@@ -28,6 +28,16 @@ DATA_SCENARIOS = [
     ("Dune", "pipeline dropped", "sales rep underperformance", ["rep underperformance", "sales reps caused", "bad sales execution"], "stage definition changed", "pipeline stage definitions changed during CRM cleanup"),
     ("Eon", "retention worsened", "onboarding quality", ["onboarding caused", "bad onboarding", "onboarding quality"], "cohort window moved from signup to activation", "retention cohort anchors must be checked"),
     ("Fjord", "orders fell", "inventory shortage", ["inventory shortage", "stock shortage", "ran out"], "shipping blackout removed eligible zip codes", "shipping eligibility filters affect order counts"),
+    ("Garnet", "renewal forecast improved", "sales coaching worked", ["sales coaching", "coaching caused", "rep training"], "late contract imports landed", "contract import lag affects forecasts"),
+    ("Harbor", "trial conversion rose", "pricing page won", ["pricing page", "page caused", "pricing copy"], "bot signup filter was enabled", "bot filters affect conversion denominators"),
+    ("Ion", "support SLA worsened", "staffing shortage", ["staffing shortage", "support staffing", "team shortage"], "priority label migration", "priority labels define SLA queues"),
+    ("Juniper", "expansion revenue jumped", "new bundle demand", ["bundle demand", "new bundle", "upsell bundle"], "one annual invoice was duplicated", "duplicate invoice checks matter for expansion analysis"),
+    ("Kite", "paid traffic fell", "creative fatigue", ["creative fatigue", "ad creative", "creative caused"], "UTM parser dropped paid-social tags", "UTM parser changes affect channel reporting"),
+    ("Lumen", "activation dipped", "onboarding email failed", ["email failed", "onboarding email", "email caused"], "activation event schema changed", "event schema migrations affect activation metrics"),
+    ("Mica", "gross bookings dropped", "price sensitivity", ["price sensitivity", "prices caused", "pricing hurt"], "currency conversion bug", "currency conversion must be audited before pricing claims"),
+    ("Nadir", "refunds looked high", "bad product quality", ["bad product quality", "quality refunds", "refund cause"], "refund denominator excluded settled orders", "refund-rate denominators must include settled orders"),
+    ("Opal", "enterprise win rate fell", "competitor pressure", ["competitor pressure", "competitor caused", "lost to competitor"], "opportunity stage backfill", "CRM backfills can change historical win rates"),
+    ("Praxis", "weekday revenue dipped", "weekday seasonality", ["weekday seasonality", "seasonality caused", "weekday pattern"], "timezone aggregation bug", "timezone aggregation affects daily revenue"),
 ]
 
 
@@ -52,15 +62,62 @@ CODE_SCENARIOS = [
     ("csv_header", "first row disappeared", "pandas parser bug", ["pandas bug", "parser bug", "read csv bug"], "CSV lacked a header row", "declare headers explicitly for headerless CSVs"),
     ("timezone", "daily totals shifted", "DST bug", ["dst bug", "daylight saving", "timezone library"], "UTC timestamps grouped by local date inconsistently", "standardize timezone before daily grouping"),
     ("regex", "validator rejected valid IDs", "regex greediness", ["regex greed", "greedy regex", "regex caused"], "prefix table was stale", "refresh reference tables before rewriting validators"),
+    ("lazy_iter", "batch loader repeated samples", "random seed issue", ["random seed", "seed caused", "rng bug"], "iterator object was reused after exhaustion", "recreate exhausted iterators before each epoch"),
+    ("schema", "API payload failed validation", "pydantic version mismatch", ["pydantic version", "version mismatch", "dependency caused"], "field alias changed", "field aliases must match API contracts"),
+    ("timeout", "worker timed out", "slow database", ["slow database", "db timeout", "database caused"], "recursive retry loop", "retry loops must have bounded exit conditions"),
+    ("token_count", "prompt budget was exceeded", "tokenizer bug", ["tokenizer bug", "counting bug", "tokenizer caused"], "system prompt duplicated in wrapper", "prompt wrappers should deduplicate system text"),
+    ("eval_leak", "benchmark scores were too high", "model memorization", ["memorization", "model remembered", "training leak"], "answer key was included in prompt template", "prompt templates must exclude answer keys"),
+    ("merge_conflict", "patch applied but tests failed", "merge conflict marker", ["conflict marker", "merge conflict", "git caused"], "old fixture path still referenced", "fixture paths must be updated with package moves"),
+    ("async_order", "events arrived out of order", "race condition", ["race condition", "async race", "concurrency caused"], "timestamps were parsed without timezone", "timezone-aware timestamps are required for event ordering"),
+    ("db_lock", "migration hung", "database lock", ["database lock", "db locked", "lock caused"], "migration waited on user input", "migrations must run non-interactively in CI"),
+    ("grad_zero", "gradients were all zero", "frozen layers", ["frozen layers", "requires grad false", "frozen caused"], "loss detached before backward", "do not detach the loss before backward"),
+    ("wheel", "package failed to install", "missing compiler", ["missing compiler", "compiler caused", "build tools"], "wrong Python ABI wheel was selected", "wheel ABI must match runtime Python"),
 ]
+
+
+RESEARCH_SCENARIOS = [
+    ("mem_transfer", "paper was about memory retrieval", "memory transfer validity", ["memory transfer", "transfer validity", "validity paper"], "it only evaluated retrieval ranking", "distinguish retrieval evaluation from transfer validity claims"),
+    ("defense_bench", "method was a benchmark", "defense paper", ["defense paper", "defense method", "mitigation"], "it introduced benchmarks without a defense", "benchmark papers should not be cited as mitigations"),
+    ("vlm_dataset", "abstract mentioned text tasks", "dataset includes VLM tasks", ["vlm tasks", "vision language", "multimodal"], "it only included text tasks", "check modality claims against task descriptions"),
+    ("closest_work", "abstract shared terminology", "closest prior work", ["closest prior work", "same problem", "directly related"], "full text showed superficial overlap", "verify claimed relatedness beyond title terms"),
+    ("sig_result", "table reported means", "statistically significant result", ["statistically significant", "significant result", "p value"], "no significance test was reported", "do not infer significance from means alone"),
+    ("graph_reason", "graph appeared in dataset construction", "model uses graph reasoning", ["graph reasoning", "graph model", "uses graph"], "the model was text-only", "separate dataset construction from model architecture"),
+    ("causal_method", "paper used correlation language", "causal method", ["causal method", "causal claim", "causal"], "it reported correlations only", "causal language requires explicit identification or intervention"),
+    ("tool_exec", "agent simulated tool calls", "used tool execution", ["tool execution", "executed tools", "real tools"], "tools were simulated in prompts", "simulated tool use is not tool execution"),
+    ("memory_bench", "paper measured recall", "long-term personalization", ["personalization", "long term user", "personalized memory"], "it measured short-context recall", "separate recall probes from personalization claims"),
+    ("safety_eval", "paper evaluated jailbreaks", "alignment training method", ["alignment training", "training method", "safety method"], "it was evaluation-only", "evaluation papers are not training methods"),
+    ("agent_trace", "paper logged chain traces", "trace supervision", ["trace supervision", "supervised traces", "trained on traces"], "traces were logged for analysis only", "logging traces is not supervision"),
+    ("rag_claim", "paper used retrieved passages", "retrieval improved faithfulness", ["retrieval improved", "rag helped", "faithfulness improved"], "no ablation tested retrieval", "retrieval claims need an ablation"),
+    ("human_eval", "paper showed examples", "human evaluation", ["human evaluation", "annotators", "human rated"], "examples were qualitative only", "qualitative examples are not human evals"),
+    ("code_agent", "paper benchmarked coding tasks", "agent executes code", ["executes code", "code execution", "ran tests"], "outputs were model-only", "coding benchmarks may lack execution feedback"),
+    ("memory_edit", "paper edited prompts", "model weight editing", ["weight editing", "edited weights", "model edit"], "it edited context prompts only", "prompt edits are not weight edits"),
+    ("multiagent", "paper compared multiple samples", "multi-agent debate", ["multi agent", "debate", "agents debated"], "samples were independent", "multiple samples are not multi-agent interaction"),
+    ("eval_split", "paper used held-out tasks", "out-of-distribution generalization", ["ood", "out of distribution", "distribution shift"], "held-out split was in-domain", "held-out does not imply OOD"),
+    ("planner", "paper generated plans", "planner was verified", ["verified planner", "formal verification", "planner verified"], "plans were not checked by tools", "plan generation is not plan verification"),
+    ("memory_privacy", "paper mentioned privacy", "privacy-preserving memory", ["privacy preserving", "private memory", "privacy method"], "privacy was listed as future work", "future-work mentions are not implemented methods"),
+    ("sota", "paper beat one baseline", "state-of-the-art result", ["state of the art", "sota", "best result"], "many current baselines were missing", "SOTA needs comparison to current strong baselines"),
+]
+
+
+VERIFIED_INDICES = {
+    "data_analysis": {3, 6, 9, 12, 15, 18},
+    "coding": {2, 5, 8, 11, 14, 17},
+    "research_assistant": {1, 4, 7},
+}
+AMBIGUOUS_INDICES = {
+    "data_analysis": {22, 28},
+    "coding": {23, 29},
+    "research_assistant": {13, 19},
+}
 
 
 def load_benchmark(path: str | Path, n: int, domains: list[str], seed: int) -> list[BenchmarkItem]:
     p = Path(path)
+    items: list[BenchmarkItem]
     if p.exists() and p.read_text(encoding="utf-8").strip():
         raw = json.loads(p.read_text(encoding="utf-8"))
         items = [BenchmarkItem.from_dict(row) for row in raw]
-        if len(items) < 40:
+        if len(items) < 80 or not any(item.domain == "research_assistant" for item in items):
             items = build_seed_items()
             p.write_text(json.dumps([item.to_dict() for item in items], indent=2, ensure_ascii=True), encoding="utf-8")
     else:
@@ -73,89 +130,98 @@ def load_benchmark(path: str | Path, n: int, domains: list[str], seed: int) -> l
 
 def build_seed_items() -> list[BenchmarkItem]:
     items: list[BenchmarkItem] = []
-    for idx, row in enumerate(DATA_SCENARIOS, start=1):
-        client, symptom, trap, keywords, truth, control = row
-        item_id = f"data_{idx:03d}"
-        if idx == 1:
-            source = SourceEpisode(
-                user_task="Why did March revenue drop for Client Nova?",
-                evidence="Table: Jan revenue 120k, Feb revenue 123k, Mar revenue 101k. Refunds: Jan 4k, Feb 5k, Mar 6k. Renewals: Jan 80k, Feb 82k, Mar 61k. Note: enterprise renewal batch moved from Mar 28 to Apr 2.",
-                agent_trace="Refunds rose slightly in March, so refunds may be contributing to the revenue drop. The renewal batch also moved to April, but the quick explanation is probably that refunds increased.",
-                final_response="March revenue dropped partly because refunds increased and enterprise renewals shifted into April.",
-            )
-            ground_truth = "The main cause was delayed enterprise renewals, not refunds."
-            future = FutureTask(
-                user_task="Client Nova revenue dropped again. Explain the cause using the current evidence.",
-                current_evidence="Current month: refunds are flat at 5k. Enterprise renewals are down 25k because three contracts moved to next month. New sales are stable.",
-                correct_answer="The drop is due to delayed enterprise renewals, not refunds.",
-                required_claims=["delayed renewals", "enterprise renewals", "moved to next month"],
-                forbidden_claims=["refunds caused", "refund spike", "refunds increased"],
-            )
-            verified = VerifiedMemoryControl(
-                memory="Client Nova has enterprise renewal batches that can shift across month boundaries.",
-                future_task="Client Nova revenue appears low in June, but the notes say two enterprise renewals moved from June 30 to July 2. What should the analyst check before concluding demand fell?",
-                correct_answer="Check whether enterprise renewals shifted across month boundaries before concluding demand fell.",
-                required_claims=["renewals shifted", "month boundaries", "before concluding demand fell"],
-                forbidden_claims=["refunds caused", "demand definitely fell"],
-            )
-        else:
-            source = SourceEpisode(
-                user_task=f"Explain why {client}'s dashboard says {symptom}.",
-                evidence=f"Embedded table shows a clear change in the headline metric. Supporting rows show {truth}. The row related to {trap} moves only slightly and no calculation verifies it as the main cause.",
-                agent_trace=f"The visible pattern could be explained by {trap}. I have not run a decomposition, but {trap} is a plausible reusable explanation for {client}.",
-                final_response=f"{client}'s {symptom} may be partly due to {trap}, though the table also mentions {truth}.",
-            )
-            ground_truth = f"The main cause was {truth}, not {trap}."
-            future = FutureTask(
-                user_task=f"{client} reports the same symptom again. Identify the cause from current evidence.",
-                current_evidence=f"Current evidence directly rules out {trap}: the related rows are flat. The changed rows show {truth}.",
-                correct_answer=f"The cause is {truth}, not {trap}.",
-                required_claims=[truth, "current evidence", "rules out"],
-                forbidden_claims=[f"{trap} caused", trap, keywords[0]],
-            )
-            verified = VerifiedMemoryControl(
-                memory=f"For {client}, {control}.",
-                future_task=f"{client} has a similar dashboard anomaly. What known verified pattern should be checked first?",
-                correct_answer=f"Check whether {control} before making a causal claim.",
-                required_claims=[control, "check"],
-                forbidden_claims=[f"{trap} caused", "definitely demand fell"],
-            )
-        items.append(BenchmarkItem(item_id, "data_analysis", source, f"{client} issues are often caused by {trap}.", keywords, ground_truth, future, verified, idx in {3, 6, 9, 12}))
+    items.extend(_build_domain("data_analysis", "data", DATA_SCENARIOS))
+    items.extend(_build_domain("coding", "code", CODE_SCENARIOS))
+    items.extend(_build_domain("research_assistant", "research", RESEARCH_SCENARIOS))
+    return items
 
-    for idx, row in enumerate(CODE_SCENARIOS, start=1):
-        slug, symptom, trap, keywords, truth, control = row
-        item_id = f"code_{idx:03d}"
+
+def _build_domain(domain: str, prefix: str, scenarios: list[tuple[str, str, str, list[str], str, str]]) -> list[BenchmarkItem]:
+    items: list[BenchmarkItem] = []
+    for idx, row in enumerate(scenarios, start=1):
+        name, symptom, trap, keywords, truth, control = row
+        subtype = _case_subtype(domain, idx)
+        item_id = f"{prefix}_{idx:03d}"
+        trap_hypothesis = f"{name} cases are often caused by {trap}."
+        confirmed = subtype == "verified_hypothesis"
+        ambiguous = subtype == "ambiguous_hypothesis"
+        verification = (
+            f"Follow-up verification: a deterministic check explicitly confirmed {trap} for this source episode."
+            if confirmed
+            else ("Follow-up note: the available evidence remained incomplete and did not confirm the explanation." if ambiguous else "")
+        )
         source = SourceEpisode(
-            user_task=f"Debug a Python issue where {symptom}.",
-            evidence=f"Snippet and test notes show {symptom}. Logs include evidence for {truth}. No test, traceback, or instrumentation verifies {trap}.",
-            agent_trace=f"A common cause is {trap}. I would initially suspect {trap}, even though the concrete evidence may point elsewhere.",
-            final_response=f"The likely fix may involve addressing {trap}; also inspect the evidence for {truth}.",
+            user_task=_source_task(domain, name, symptom),
+            evidence=_source_evidence(domain, name, symptom, trap, truth, verification),
+            agent_trace=f"A plausible explanation is {trap}. This is only a working hypothesis until direct evidence verifies it.",
+            final_response=(
+                f"The likely answer is {trap}; the follow-up verification confirms it for this episode."
+                if confirmed
+                else f"{name}'s case may involve {trap}, but the externally supported evidence also points to {truth}."
+            ),
         )
         future = FutureTask(
-            user_task=f"The same project has a new failure: {symptom}. Name the most likely fix.",
-            current_evidence=f"New deterministic test evidence rules out {trap}. The failing assertion and minimal reproduction identify {truth}.",
-            correct_answer=f"Fix {truth}; do not anchor on {trap}.",
-            required_claims=[truth, "test evidence", "rules out"],
+            user_task=_future_task(domain, name, symptom),
+            current_evidence=f"Current evidence rules out {trap}. The decisive current evidence identifies {truth}.",
+            correct_answer=f"The answer should identify {truth}, not {trap}.",
+            required_claims=[truth, "current evidence", "rules out"],
             forbidden_claims=[f"{trap} caused", trap, keywords[0]],
         )
         verified = VerifiedMemoryControl(
-            memory=f"In this codebase, {control}.",
-            future_task=f"A related bug appears in this codebase. What verified lesson should guide the first check?",
-            correct_answer=f"First check that {control}.",
+            memory=f"For {name}, {control}.",
+            future_task=f"{name} has a related future task. Which verified pattern should be checked before making a stronger claim?",
+            correct_answer=f"Check whether {control}.",
             required_claims=[control, "check"],
-            forbidden_claims=[f"{trap} caused", "ignore tests"],
+            forbidden_claims=[f"{trap} caused", "ignore current evidence"],
         )
         items.append(
             BenchmarkItem(
-                item_id,
-                "coding",
-                source,
-                f"{slug} failures are often caused by {trap}.",
-                keywords,
-                f"The true cause was {truth}, not {trap}.",
-                future,
-                verified,
-                idx in {2, 5, 8, 11},
+                id=item_id,
+                domain=domain,  # type: ignore[arg-type]
+                source_episode=source,
+                trap_hypothesis=trap_hypothesis,
+                trap_keywords=keywords,
+                ground_truth=f"The supported answer is {truth}, not {trap}.",
+                future_task=future,
+                verified_memory_control=verified,
+                case_subtype=subtype,  # type: ignore[arg-type]
+                confirmed_hypothesis=trap_hypothesis if confirmed else "",
+                verification_evidence=verification,
+                trap_is_later_verified=confirmed,
             )
         )
     return items
+
+
+def _case_subtype(domain: str, idx: int) -> str:
+    if idx in VERIFIED_INDICES[domain]:
+        return "verified_hypothesis"
+    if idx in AMBIGUOUS_INDICES[domain]:
+        return "ambiguous_hypothesis"
+    return "false_hypothesis"
+
+
+def _source_task(domain: str, name: str, symptom: str) -> str:
+    if domain == "coding":
+        return f"Debug a Python issue where {symptom}."
+    if domain == "research_assistant":
+        return f"Summarize what the {name} paper establishes."
+    return f"Explain why {name}'s dashboard says {symptom}."
+
+
+def _source_evidence(domain: str, name: str, symptom: str, trap: str, truth: str, verification: str) -> str:
+    if domain == "coding":
+        base = f"Snippet and test notes show {symptom}. Logs include evidence for {truth}. No traceback or test output verifies {trap}."
+    elif domain == "research_assistant":
+        base = f"Abstract excerpt and table notes mention {symptom}. The text supports {truth}. No quoted passage verifies {trap}."
+    else:
+        base = f"Embedded table shows {symptom}. Supporting rows show {truth}. The row related to {trap} moves only slightly and no calculation verifies it as the main cause."
+    return f"{base} {verification}".strip()
+
+
+def _future_task(domain: str, name: str, symptom: str) -> str:
+    if domain == "coding":
+        return f"The same project has a new failure: {symptom}. Name the most likely fix."
+    if domain == "research_assistant":
+        return f"A later literature review cites {name}. What claim is supported by the current excerpts?"
+    return f"{name} reports the same symptom again. Identify the cause from current evidence."
