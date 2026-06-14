@@ -1,0 +1,5 @@
+method,n_items,false_evidence_promotion_rate,downstream_contamination_rate,trap_task_accuracy,verified_control_accuracy,useful_memory_retention,mixed_rate,net_utility_trap,net_utility_control
+no_memory,40,0.0,0.0,1.0,0.0,0.0,1.0,0.0,0.0
+naive,40,1.0,0.975,0.0,1.0,1.0,0.025,-1.0,1.0
+reflection,40,1.0,0.975,0.0,1.0,1.0,0.025,-1.0,1.0
+evidence_labeled,40,0.0,0.0,1.0,1.0,1.0,1.0,0.0,1.0

@@ -11,7 +11,7 @@ def write_summary(out_dir: str | Path, scores: list[ScoreRecord], items: list[Be
     out = Path(out_dir)
     rows = summarize(scores, methods)
     with (out / "summary.csv").open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     (out / "summary.md").write_text(render_markdown(rows, scores, items), encoding="utf-8")
@@ -127,4 +127,3 @@ def evaluate_criteria(rows: list[dict[str, object]]) -> list[tuple[str, bool]]:
         ("Evidence-labeled memory reduces false promotion by >= 50% relative to reflection", ref_false > 0 and ev_false <= ref_false * 0.50),
         ("Evidence-labeled memory loses <= 15 percentage points useful memory retention compared to naive/reflection", best_ret - float(evidence.get("useful_memory_retention", 0.0)) <= 0.15),
     ]
-
