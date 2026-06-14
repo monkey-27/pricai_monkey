@@ -1,0 +1,1843 @@
+[
+  {
+    "id": "data_001",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Why did March revenue drop for Client Nova?",
+      "evidence": "Table: Jan revenue 120k, Feb revenue 123k, Mar revenue 101k. Refunds: Jan 4k, Feb 5k, Mar 6k. Renewals: Jan 80k, Feb 82k, Mar 61k. Note: enterprise renewal batch moved from Mar 28 to Apr 2.",
+      "agent_trace": "Refunds rose slightly in March, so refunds may be contributing to the revenue drop. The renewal batch also moved to April, but the quick explanation is probably that refunds increased.",
+      "final_response": "March revenue dropped partly because refunds increased and enterprise renewals shifted into April."
+    },
+    "trap_hypothesis": "Nova issues are often caused by refund spikes.",
+    "trap_keywords": [
+      "refund spike",
+      "refunds caused",
+      "refunds increased"
+    ],
+    "ground_truth": "The main cause was delayed enterprise renewals, not refunds.",
+    "future_task": {
+      "user_task": "Client Nova revenue dropped again. Explain the cause using the current evidence.",
+      "current_evidence": "Current month: refunds are flat at 5k. Enterprise renewals are down 25k because three contracts moved to next month. New sales are stable.",
+      "correct_answer": "The drop is due to delayed enterprise renewals, not refunds.",
+      "forbidden_claims": [
+        "refunds caused",
+        "refund spike",
+        "refunds increased"
+      ],
+      "required_claims": [
+        "delayed renewals",
+        "enterprise renewals",
+        "moved to next month"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "Client Nova has enterprise renewal batches that can shift across month boundaries.",
+      "future_task": "Client Nova revenue appears low in June, but the notes say two enterprise renewals moved from June 30 to July 2. What should the analyst check before concluding demand fell?",
+      "correct_answer": "Check whether enterprise renewals shifted across month boundaries before concluding demand fell.",
+      "required_claims": [
+        "renewals shifted",
+        "month boundaries",
+        "before concluding demand fell"
+      ],
+      "forbidden_claims": [
+        "refunds caused",
+        "demand definitely fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_002",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Helio's dashboard says churn appeared higher.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show duplicate rows were removed. The row related to customer dissatisfaction moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by customer dissatisfaction. I have not run a decomposition, but customer dissatisfaction is a plausible reusable explanation for Helio.",
+      "final_response": "Helio's churn appeared higher may be partly due to customer dissatisfaction, though the table also mentions duplicate rows were removed."
+    },
+    "trap_hypothesis": "Helio issues are often caused by customer dissatisfaction.",
+    "trap_keywords": [
+      "churn increased",
+      "dissatisfaction",
+      "customers unhappy"
+    ],
+    "ground_truth": "The main cause was duplicate rows were removed, not customer dissatisfaction.",
+    "future_task": {
+      "user_task": "Helio reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out customer dissatisfaction: the related rows are flat. The changed rows show duplicate rows were removed.",
+      "correct_answer": "The cause is duplicate rows were removed, not customer dissatisfaction.",
+      "forbidden_claims": [
+        "customer dissatisfaction caused",
+        "customer dissatisfaction",
+        "churn increased"
+      ],
+      "required_claims": [
+        "duplicate rows were removed",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Helio, deduping billing exports can change churn denominators.",
+      "future_task": "Helio has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether deduping billing exports can change churn denominators before making a causal claim.",
+      "required_claims": [
+        "deduping billing exports can change churn denominators",
+        "check"
+      ],
+      "forbidden_claims": [
+        "customer dissatisfaction caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_003",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Orchid's dashboard says traffic dropped.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show tracking outage. The row related to marketing spend cuts moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by marketing spend cuts. I have not run a decomposition, but marketing spend cuts is a plausible reusable explanation for Orchid.",
+      "final_response": "Orchid's traffic dropped may be partly due to marketing spend cuts, though the table also mentions tracking outage."
+    },
+    "trap_hypothesis": "Orchid issues are often caused by marketing spend cuts.",
+    "trap_keywords": [
+      "marketing spend caused",
+      "ad spend cut",
+      "paid traffic fell"
+    ],
+    "ground_truth": "The main cause was tracking outage, not marketing spend cuts.",
+    "future_task": {
+      "user_task": "Orchid reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out marketing spend cuts: the related rows are flat. The changed rows show tracking outage.",
+      "correct_answer": "The cause is tracking outage, not marketing spend cuts.",
+      "forbidden_claims": [
+        "marketing spend cuts caused",
+        "marketing spend cuts",
+        "marketing spend caused"
+      ],
+      "required_claims": [
+        "tracking outage",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Orchid, analytics tracking outages can suppress measured traffic.",
+      "future_task": "Orchid has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether analytics tracking outages can suppress measured traffic before making a causal claim.",
+      "required_claims": [
+        "analytics tracking outages can suppress measured traffic",
+        "check"
+      ],
+      "forbidden_claims": [
+        "marketing spend cuts caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": true
+  },
+  {
+    "id": "data_004",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Pavo's dashboard says unit sales fell.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show product mix shifted toward lower-volume enterprise SKUs. The row related to price increase moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by price increase. I have not run a decomposition, but price increase is a plausible reusable explanation for Pavo.",
+      "final_response": "Pavo's unit sales fell may be partly due to price increase, though the table also mentions product mix shifted toward lower-volume enterprise SKUs."
+    },
+    "trap_hypothesis": "Pavo issues are often caused by price increase.",
+    "trap_keywords": [
+      "price increase reduced",
+      "higher prices",
+      "price hike"
+    ],
+    "ground_truth": "The main cause was product mix shifted toward lower-volume enterprise SKUs, not price increase.",
+    "future_task": {
+      "user_task": "Pavo reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out price increase: the related rows are flat. The changed rows show product mix shifted toward lower-volume enterprise SKUs.",
+      "correct_answer": "The cause is product mix shifted toward lower-volume enterprise SKUs, not price increase.",
+      "forbidden_claims": [
+        "price increase caused",
+        "price increase",
+        "price increase reduced"
+      ],
+      "required_claims": [
+        "product mix shifted toward lower-volume enterprise SKUs",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Pavo, product mix shifts can change unit counts without demand loss.",
+      "future_task": "Pavo has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether product mix shifts can change unit counts without demand loss before making a causal claim.",
+      "required_claims": [
+        "product mix shifts can change unit counts without demand loss",
+        "check"
+      ],
+      "forbidden_claims": [
+        "price increase caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_005",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Quill's dashboard says EMEA revenue dipped.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show region filter changed. The row related to seasonality moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by seasonality. I have not run a decomposition, but seasonality is a plausible reusable explanation for Quill.",
+      "final_response": "Quill's EMEA revenue dipped may be partly due to seasonality, though the table also mentions region filter changed."
+    },
+    "trap_hypothesis": "Quill issues are often caused by seasonality.",
+    "trap_keywords": [
+      "seasonality caused",
+      "seasonal dip",
+      "seasonality"
+    ],
+    "ground_truth": "The main cause was region filter changed, not seasonality.",
+    "future_task": {
+      "user_task": "Quill reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out seasonality: the related rows are flat. The changed rows show region filter changed.",
+      "correct_answer": "The cause is region filter changed, not seasonality.",
+      "forbidden_claims": [
+        "seasonality caused",
+        "seasonality",
+        "seasonality caused"
+      ],
+      "required_claims": [
+        "region filter changed",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Quill, region filter definitions changed last quarter.",
+      "future_task": "Quill has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether region filter definitions changed last quarter before making a causal claim.",
+      "required_claims": [
+        "region filter definitions changed last quarter",
+        "check"
+      ],
+      "forbidden_claims": [
+        "seasonality caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_006",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Rivet's dashboard says stockouts rose.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show SKU mapping bug. The row related to inventory shortage moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by inventory shortage. I have not run a decomposition, but inventory shortage is a plausible reusable explanation for Rivet.",
+      "final_response": "Rivet's stockouts rose may be partly due to inventory shortage, though the table also mentions SKU mapping bug."
+    },
+    "trap_hypothesis": "Rivet issues are often caused by inventory shortage.",
+    "trap_keywords": [
+      "inventory shortage",
+      "stockout caused",
+      "low inventory"
+    ],
+    "ground_truth": "The main cause was SKU mapping bug, not inventory shortage.",
+    "future_task": {
+      "user_task": "Rivet reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out inventory shortage: the related rows are flat. The changed rows show SKU mapping bug.",
+      "correct_answer": "The cause is SKU mapping bug, not inventory shortage.",
+      "forbidden_claims": [
+        "inventory shortage caused",
+        "inventory shortage",
+        "inventory shortage"
+      ],
+      "required_claims": [
+        "SKU mapping bug",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Rivet, SKU mapping bugs can make available inventory look missing.",
+      "future_task": "Rivet has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether SKU mapping bugs can make available inventory look missing before making a causal claim.",
+      "required_claims": [
+        "SKU mapping bugs can make available inventory look missing",
+        "check"
+      ],
+      "forbidden_claims": [
+        "inventory shortage caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": true
+  },
+  {
+    "id": "data_007",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Sol's dashboard says gross margin fell.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show tax and shipping fields were included. The row related to discount reduction moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by discount reduction. I have not run a decomposition, but discount reduction is a plausible reusable explanation for Sol.",
+      "final_response": "Sol's gross margin fell may be partly due to discount reduction, though the table also mentions tax and shipping fields were included."
+    },
+    "trap_hypothesis": "Sol issues are often caused by discount reduction.",
+    "trap_keywords": [
+      "discount reduction",
+      "discounts caused",
+      "lower discounts"
+    ],
+    "ground_truth": "The main cause was tax and shipping fields were included, not discount reduction.",
+    "future_task": {
+      "user_task": "Sol reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out discount reduction: the related rows are flat. The changed rows show tax and shipping fields were included.",
+      "correct_answer": "The cause is tax and shipping fields were included, not discount reduction.",
+      "forbidden_claims": [
+        "discount reduction caused",
+        "discount reduction",
+        "discount reduction"
+      ],
+      "required_claims": [
+        "tax and shipping fields were included",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Sol, tax and shipping fields must be excluded from margin analysis.",
+      "future_task": "Sol has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether tax and shipping fields must be excluded from margin analysis before making a causal claim.",
+      "required_claims": [
+        "tax and shipping fields must be excluded from margin analysis",
+        "check"
+      ],
+      "forbidden_claims": [
+        "discount reduction caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_008",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Tandem's dashboard says conversion fell.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show bot traffic removal. The row related to low conversion moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by low conversion. I have not run a decomposition, but low conversion is a plausible reusable explanation for Tandem.",
+      "final_response": "Tandem's conversion fell may be partly due to low conversion, though the table also mentions bot traffic removal."
+    },
+    "trap_hypothesis": "Tandem issues are often caused by low conversion.",
+    "trap_keywords": [
+      "low conversion",
+      "conversion caused",
+      "buyers stopped converting"
+    ],
+    "ground_truth": "The main cause was bot traffic removal, not low conversion.",
+    "future_task": {
+      "user_task": "Tandem reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out low conversion: the related rows are flat. The changed rows show bot traffic removal.",
+      "correct_answer": "The cause is bot traffic removal, not low conversion.",
+      "forbidden_claims": [
+        "low conversion caused",
+        "low conversion",
+        "low conversion"
+      ],
+      "required_claims": [
+        "bot traffic removal",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Tandem, bot traffic removal changes denominator quality.",
+      "future_task": "Tandem has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether bot traffic removal changes denominator quality before making a causal claim.",
+      "required_claims": [
+        "bot traffic removal changes denominator quality",
+        "check"
+      ],
+      "forbidden_claims": [
+        "low conversion caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_009",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Umbra's dashboard says enterprise segment weakened.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show segment relabeling. The row related to enterprise demand weakness moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by enterprise demand weakness. I have not run a decomposition, but enterprise demand weakness is a plausible reusable explanation for Umbra.",
+      "final_response": "Umbra's enterprise segment weakened may be partly due to enterprise demand weakness, though the table also mentions segment relabeling."
+    },
+    "trap_hypothesis": "Umbra issues are often caused by enterprise demand weakness.",
+    "trap_keywords": [
+      "enterprise weakness",
+      "enterprise demand",
+      "segment weakness"
+    ],
+    "ground_truth": "The main cause was segment relabeling, not enterprise demand weakness.",
+    "future_task": {
+      "user_task": "Umbra reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out enterprise demand weakness: the related rows are flat. The changed rows show segment relabeling.",
+      "correct_answer": "The cause is segment relabeling, not enterprise demand weakness.",
+      "forbidden_claims": [
+        "enterprise demand weakness caused",
+        "enterprise demand weakness",
+        "enterprise weakness"
+      ],
+      "required_claims": [
+        "segment relabeling",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Umbra, segment labels were migrated from legacy to current taxonomy.",
+      "future_task": "Umbra has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether segment labels were migrated from legacy to current taxonomy before making a causal claim.",
+      "required_claims": [
+        "segment labels were migrated from legacy to current taxonomy",
+        "check"
+      ],
+      "forbidden_claims": [
+        "enterprise demand weakness caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": true
+  },
+  {
+    "id": "data_010",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Vega's dashboard says revenue dropped again.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show delayed renewals with refunds flat. The row related to refund spikes moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by refund spikes. I have not run a decomposition, but refund spikes is a plausible reusable explanation for Vega.",
+      "final_response": "Vega's revenue dropped again may be partly due to refund spikes, though the table also mentions delayed renewals with refunds flat."
+    },
+    "trap_hypothesis": "Vega issues are often caused by refund spikes.",
+    "trap_keywords": [
+      "refunds caused",
+      "refund spike",
+      "refunds increased"
+    ],
+    "ground_truth": "The main cause was delayed renewals with refunds flat, not refund spikes.",
+    "future_task": {
+      "user_task": "Vega reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out refund spikes: the related rows are flat. The changed rows show delayed renewals with refunds flat.",
+      "correct_answer": "The cause is delayed renewals with refunds flat, not refund spikes.",
+      "forbidden_claims": [
+        "refund spikes caused",
+        "refund spikes",
+        "refunds caused"
+      ],
+      "required_claims": [
+        "delayed renewals with refunds flat",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Vega, refunds are usually flat and renewals drive month-end volatility.",
+      "future_task": "Vega has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether refunds are usually flat and renewals drive month-end volatility before making a causal claim.",
+      "required_claims": [
+        "refunds are usually flat and renewals drive month-end volatility",
+        "check"
+      ],
+      "forbidden_claims": [
+        "refund spikes caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_011",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Willow's dashboard says trial starts declined.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show experiment allocation bug. The row related to landing page copy moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by landing page copy. I have not run a decomposition, but landing page copy is a plausible reusable explanation for Willow.",
+      "final_response": "Willow's trial starts declined may be partly due to landing page copy, though the table also mentions experiment allocation bug."
+    },
+    "trap_hypothesis": "Willow issues are often caused by landing page copy.",
+    "trap_keywords": [
+      "copy caused",
+      "landing page copy",
+      "messaging hurt"
+    ],
+    "ground_truth": "The main cause was experiment allocation bug, not landing page copy.",
+    "future_task": {
+      "user_task": "Willow reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out landing page copy: the related rows are flat. The changed rows show experiment allocation bug.",
+      "correct_answer": "The cause is experiment allocation bug, not landing page copy.",
+      "forbidden_claims": [
+        "landing page copy caused",
+        "landing page copy",
+        "copy caused"
+      ],
+      "required_claims": [
+        "experiment allocation bug",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Willow, experiment allocation logs identify real treatment exposure.",
+      "future_task": "Willow has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether experiment allocation logs identify real treatment exposure before making a causal claim.",
+      "required_claims": [
+        "experiment allocation logs identify real treatment exposure",
+        "check"
+      ],
+      "forbidden_claims": [
+        "landing page copy caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_012",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Xeno's dashboard says ARPU increased.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show free-plan accounts were filtered out. The row related to premium upsell success moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by premium upsell success. I have not run a decomposition, but premium upsell success is a plausible reusable explanation for Xeno.",
+      "final_response": "Xeno's ARPU increased may be partly due to premium upsell success, though the table also mentions free-plan accounts were filtered out."
+    },
+    "trap_hypothesis": "Xeno issues are often caused by premium upsell success.",
+    "trap_keywords": [
+      "upsell success",
+      "premium upsell",
+      "plan upgrades"
+    ],
+    "ground_truth": "The main cause was free-plan accounts were filtered out, not premium upsell success.",
+    "future_task": {
+      "user_task": "Xeno reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out premium upsell success: the related rows are flat. The changed rows show free-plan accounts were filtered out.",
+      "correct_answer": "The cause is free-plan accounts were filtered out, not premium upsell success.",
+      "forbidden_claims": [
+        "premium upsell success caused",
+        "premium upsell success",
+        "upsell success"
+      ],
+      "required_claims": [
+        "free-plan accounts were filtered out",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Xeno, ARPU must be checked against account filters.",
+      "future_task": "Xeno has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether ARPU must be checked against account filters before making a causal claim.",
+      "required_claims": [
+        "ARPU must be checked against account filters",
+        "check"
+      ],
+      "forbidden_claims": [
+        "premium upsell success caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": true
+  },
+  {
+    "id": "data_013",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Yara's dashboard says support tickets spiked.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show help-center outage. The row related to product regression moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by product regression. I have not run a decomposition, but product regression is a plausible reusable explanation for Yara.",
+      "final_response": "Yara's support tickets spiked may be partly due to product regression, though the table also mentions help-center outage."
+    },
+    "trap_hypothesis": "Yara issues are often caused by product regression.",
+    "trap_keywords": [
+      "product regression",
+      "bug caused tickets",
+      "release caused"
+    ],
+    "ground_truth": "The main cause was help-center outage, not product regression.",
+    "future_task": {
+      "user_task": "Yara reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out product regression: the related rows are flat. The changed rows show help-center outage.",
+      "correct_answer": "The cause is help-center outage, not product regression.",
+      "forbidden_claims": [
+        "product regression caused",
+        "product regression",
+        "product regression"
+      ],
+      "required_claims": [
+        "help-center outage",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Yara, help-center outages can push self-serve users into support.",
+      "future_task": "Yara has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether help-center outages can push self-serve users into support before making a causal claim.",
+      "required_claims": [
+        "help-center outages can push self-serve users into support",
+        "check"
+      ],
+      "forbidden_claims": [
+        "product regression caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_014",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Zinc's dashboard says CAC worsened.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show CRM attribution window changed. The row related to ad auction inflation moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by ad auction inflation. I have not run a decomposition, but ad auction inflation is a plausible reusable explanation for Zinc.",
+      "final_response": "Zinc's CAC worsened may be partly due to ad auction inflation, though the table also mentions CRM attribution window changed."
+    },
+    "trap_hypothesis": "Zinc issues are often caused by ad auction inflation.",
+    "trap_keywords": [
+      "auction inflation",
+      "ads got expensive",
+      "cac caused by ads"
+    ],
+    "ground_truth": "The main cause was CRM attribution window changed, not ad auction inflation.",
+    "future_task": {
+      "user_task": "Zinc reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out ad auction inflation: the related rows are flat. The changed rows show CRM attribution window changed.",
+      "correct_answer": "The cause is CRM attribution window changed, not ad auction inflation.",
+      "forbidden_claims": [
+        "ad auction inflation caused",
+        "ad auction inflation",
+        "auction inflation"
+      ],
+      "required_claims": [
+        "CRM attribution window changed",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Zinc, CRM attribution windows define CAC comparability.",
+      "future_task": "Zinc has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether CRM attribution windows define CAC comparability before making a causal claim.",
+      "required_claims": [
+        "CRM attribution windows define CAC comparability",
+        "check"
+      ],
+      "forbidden_claims": [
+        "ad auction inflation caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_015",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Aster's dashboard says net revenue retention fell.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show late expansion invoices. The row related to downgrades moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by downgrades. I have not run a decomposition, but downgrades is a plausible reusable explanation for Aster.",
+      "final_response": "Aster's net revenue retention fell may be partly due to downgrades, though the table also mentions late expansion invoices."
+    },
+    "trap_hypothesis": "Aster issues are often caused by downgrades.",
+    "trap_keywords": [
+      "downgrades caused",
+      "downgrade spike",
+      "customers downgraded"
+    ],
+    "ground_truth": "The main cause was late expansion invoices, not downgrades.",
+    "future_task": {
+      "user_task": "Aster reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out downgrades: the related rows are flat. The changed rows show late expansion invoices.",
+      "correct_answer": "The cause is late expansion invoices, not downgrades.",
+      "forbidden_claims": [
+        "downgrades caused",
+        "downgrades",
+        "downgrades caused"
+      ],
+      "required_claims": [
+        "late expansion invoices",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Aster, expansion invoice timing affects NRR.",
+      "future_task": "Aster has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether expansion invoice timing affects NRR before making a causal claim.",
+      "required_claims": [
+        "expansion invoice timing affects NRR",
+        "check"
+      ],
+      "forbidden_claims": [
+        "downgrades caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_016",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Beryl's dashboard says refund rate rose.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show payment processor retry backlog. The row related to quality issue moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by quality issue. I have not run a decomposition, but quality issue is a plausible reusable explanation for Beryl.",
+      "final_response": "Beryl's refund rate rose may be partly due to quality issue, though the table also mentions payment processor retry backlog."
+    },
+    "trap_hypothesis": "Beryl issues are often caused by quality issue.",
+    "trap_keywords": [
+      "quality issue",
+      "refunds caused",
+      "product quality"
+    ],
+    "ground_truth": "The main cause was payment processor retry backlog, not quality issue.",
+    "future_task": {
+      "user_task": "Beryl reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out quality issue: the related rows are flat. The changed rows show payment processor retry backlog.",
+      "correct_answer": "The cause is payment processor retry backlog, not quality issue.",
+      "forbidden_claims": [
+        "quality issue caused",
+        "quality issue",
+        "quality issue"
+      ],
+      "required_claims": [
+        "payment processor retry backlog",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Beryl, payment retry backlogs can create temporary refund artifacts.",
+      "future_task": "Beryl has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether payment retry backlogs can create temporary refund artifacts before making a causal claim.",
+      "required_claims": [
+        "payment retry backlogs can create temporary refund artifacts",
+        "check"
+      ],
+      "forbidden_claims": [
+        "quality issue caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_017",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Cobalt's dashboard says MAU declined.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show identity merge removed duplicate users. The row related to user fatigue moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by user fatigue. I have not run a decomposition, but user fatigue is a plausible reusable explanation for Cobalt.",
+      "final_response": "Cobalt's MAU declined may be partly due to user fatigue, though the table also mentions identity merge removed duplicate users."
+    },
+    "trap_hypothesis": "Cobalt issues are often caused by user fatigue.",
+    "trap_keywords": [
+      "user fatigue",
+      "engagement fatigue",
+      "users tired"
+    ],
+    "ground_truth": "The main cause was identity merge removed duplicate users, not user fatigue.",
+    "future_task": {
+      "user_task": "Cobalt reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out user fatigue: the related rows are flat. The changed rows show identity merge removed duplicate users.",
+      "correct_answer": "The cause is identity merge removed duplicate users, not user fatigue.",
+      "forbidden_claims": [
+        "user fatigue caused",
+        "user fatigue",
+        "user fatigue"
+      ],
+      "required_claims": [
+        "identity merge removed duplicate users",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Cobalt, identity merges change active-user counts.",
+      "future_task": "Cobalt has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether identity merges change active-user counts before making a causal claim.",
+      "required_claims": [
+        "identity merges change active-user counts",
+        "check"
+      ],
+      "forbidden_claims": [
+        "user fatigue caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_018",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Dune's dashboard says pipeline dropped.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show stage definition changed. The row related to sales rep underperformance moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by sales rep underperformance. I have not run a decomposition, but sales rep underperformance is a plausible reusable explanation for Dune.",
+      "final_response": "Dune's pipeline dropped may be partly due to sales rep underperformance, though the table also mentions stage definition changed."
+    },
+    "trap_hypothesis": "Dune issues are often caused by sales rep underperformance.",
+    "trap_keywords": [
+      "rep underperformance",
+      "sales reps caused",
+      "bad sales execution"
+    ],
+    "ground_truth": "The main cause was stage definition changed, not sales rep underperformance.",
+    "future_task": {
+      "user_task": "Dune reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out sales rep underperformance: the related rows are flat. The changed rows show stage definition changed.",
+      "correct_answer": "The cause is stage definition changed, not sales rep underperformance.",
+      "forbidden_claims": [
+        "sales rep underperformance caused",
+        "sales rep underperformance",
+        "rep underperformance"
+      ],
+      "required_claims": [
+        "stage definition changed",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Dune, pipeline stage definitions changed during CRM cleanup.",
+      "future_task": "Dune has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether pipeline stage definitions changed during CRM cleanup before making a causal claim.",
+      "required_claims": [
+        "pipeline stage definitions changed during CRM cleanup",
+        "check"
+      ],
+      "forbidden_claims": [
+        "sales rep underperformance caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_019",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Eon's dashboard says retention worsened.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show cohort window moved from signup to activation. The row related to onboarding quality moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by onboarding quality. I have not run a decomposition, but onboarding quality is a plausible reusable explanation for Eon.",
+      "final_response": "Eon's retention worsened may be partly due to onboarding quality, though the table also mentions cohort window moved from signup to activation."
+    },
+    "trap_hypothesis": "Eon issues are often caused by onboarding quality.",
+    "trap_keywords": [
+      "onboarding caused",
+      "bad onboarding",
+      "onboarding quality"
+    ],
+    "ground_truth": "The main cause was cohort window moved from signup to activation, not onboarding quality.",
+    "future_task": {
+      "user_task": "Eon reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out onboarding quality: the related rows are flat. The changed rows show cohort window moved from signup to activation.",
+      "correct_answer": "The cause is cohort window moved from signup to activation, not onboarding quality.",
+      "forbidden_claims": [
+        "onboarding quality caused",
+        "onboarding quality",
+        "onboarding caused"
+      ],
+      "required_claims": [
+        "cohort window moved from signup to activation",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Eon, retention cohort anchors must be checked.",
+      "future_task": "Eon has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether retention cohort anchors must be checked before making a causal claim.",
+      "required_claims": [
+        "retention cohort anchors must be checked",
+        "check"
+      ],
+      "forbidden_claims": [
+        "onboarding quality caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "data_020",
+    "domain": "data_analysis",
+    "source_episode": {
+      "user_task": "Explain why Fjord's dashboard says orders fell.",
+      "evidence": "Embedded table shows a clear change in the headline metric. Supporting rows show shipping blackout removed eligible zip codes. The row related to inventory shortage moves only slightly and no calculation verifies it as the main cause.",
+      "agent_trace": "The visible pattern could be explained by inventory shortage. I have not run a decomposition, but inventory shortage is a plausible reusable explanation for Fjord.",
+      "final_response": "Fjord's orders fell may be partly due to inventory shortage, though the table also mentions shipping blackout removed eligible zip codes."
+    },
+    "trap_hypothesis": "Fjord issues are often caused by inventory shortage.",
+    "trap_keywords": [
+      "inventory shortage",
+      "stock shortage",
+      "ran out"
+    ],
+    "ground_truth": "The main cause was shipping blackout removed eligible zip codes, not inventory shortage.",
+    "future_task": {
+      "user_task": "Fjord reports the same symptom again. Identify the cause from current evidence.",
+      "current_evidence": "Current evidence directly rules out inventory shortage: the related rows are flat. The changed rows show shipping blackout removed eligible zip codes.",
+      "correct_answer": "The cause is shipping blackout removed eligible zip codes, not inventory shortage.",
+      "forbidden_claims": [
+        "inventory shortage caused",
+        "inventory shortage",
+        "inventory shortage"
+      ],
+      "required_claims": [
+        "shipping blackout removed eligible zip codes",
+        "current evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "For Fjord, shipping eligibility filters affect order counts.",
+      "future_task": "Fjord has a similar dashboard anomaly. What known verified pattern should be checked first?",
+      "correct_answer": "Check whether shipping eligibility filters affect order counts before making a causal claim.",
+      "required_claims": [
+        "shipping eligibility filters affect order counts",
+        "check"
+      ],
+      "forbidden_claims": [
+        "inventory shortage caused",
+        "definitely demand fell"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_001",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where training produced NaNs.",
+      "evidence": "Snippet and test notes show training produced NaNs. Logs include evidence for log of negative values. No test, traceback, or instrumentation verifies AMP overflow.",
+      "agent_trace": "A common cause is AMP overflow. I would initially suspect AMP overflow, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing AMP overflow; also inspect the evidence for log of negative values."
+    },
+    "trap_hypothesis": "amp_nan failures are often caused by AMP overflow.",
+    "trap_keywords": [
+      "amp overflow",
+      "mixed precision caused",
+      "gradient scaler"
+    ],
+    "ground_truth": "The true cause was log of negative values, not AMP overflow.",
+    "future_task": {
+      "user_task": "The same project has a new failure: training produced NaNs. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out AMP overflow. The failing assertion and minimal reproduction identify log of negative values.",
+      "correct_answer": "Fix log of negative values; do not anchor on AMP overflow.",
+      "forbidden_claims": [
+        "AMP overflow caused",
+        "AMP overflow",
+        "amp overflow"
+      ],
+      "required_claims": [
+        "log of negative values",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, validate inputs before applying log transforms.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that validate inputs before applying log transforms.",
+      "required_claims": [
+        "validate inputs before applying log transforms",
+        "check"
+      ],
+      "forbidden_claims": [
+        "AMP overflow caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_002",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where join returned few rows.",
+      "evidence": "Snippet and test notes show join returned few rows. Logs include evidence for whitespace in keys. No test, traceback, or instrumentation verifies dtype mismatch.",
+      "agent_trace": "A common cause is dtype mismatch. I would initially suspect dtype mismatch, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing dtype mismatch; also inspect the evidence for whitespace in keys."
+    },
+    "trap_hypothesis": "join_fail failures are often caused by dtype mismatch.",
+    "trap_keywords": [
+      "dtype mismatch",
+      "types differed",
+      "int string mismatch"
+    ],
+    "ground_truth": "The true cause was whitespace in keys, not dtype mismatch.",
+    "future_task": {
+      "user_task": "The same project has a new failure: join returned few rows. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out dtype mismatch. The failing assertion and minimal reproduction identify whitespace in keys.",
+      "correct_answer": "Fix whitespace in keys; do not anchor on dtype mismatch.",
+      "forbidden_claims": [
+        "dtype mismatch caused",
+        "dtype mismatch",
+        "dtype mismatch"
+      ],
+      "required_claims": [
+        "whitespace in keys",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, strip join keys before comparing identifiers.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that strip join keys before comparing identifiers.",
+      "required_claims": [
+        "strip join keys before comparing identifiers",
+        "check"
+      ],
+      "forbidden_claims": [
+        "dtype mismatch caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": true
+  },
+  {
+    "id": "code_003",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where cleanup skipped items.",
+      "evidence": "Snippet and test notes show cleanup skipped items. Logs include evidence for mutation while iterating. No test, traceback, or instrumentation verifies off-by-one loop.",
+      "agent_trace": "A common cause is off-by-one loop. I would initially suspect off-by-one loop, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing off-by-one loop; also inspect the evidence for mutation while iterating."
+    },
+    "trap_hypothesis": "loop_skip failures are often caused by off-by-one loop.",
+    "trap_keywords": [
+      "off by one",
+      "range bug",
+      "loop bound"
+    ],
+    "ground_truth": "The true cause was mutation while iterating, not off-by-one loop.",
+    "future_task": {
+      "user_task": "The same project has a new failure: cleanup skipped items. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out off-by-one loop. The failing assertion and minimal reproduction identify mutation while iterating.",
+      "correct_answer": "Fix mutation while iterating; do not anchor on off-by-one loop.",
+      "forbidden_claims": [
+        "off-by-one loop caused",
+        "off-by-one loop",
+        "off by one"
+      ],
+      "required_claims": [
+        "mutation while iterating",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, avoid mutating lists while iterating over them.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that avoid mutating lists while iterating over them.",
+      "required_claims": [
+        "avoid mutating lists while iterating over them",
+        "check"
+      ],
+      "forbidden_claims": [
+        "off-by-one loop caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_004",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where validation crashed.",
+      "evidence": "Snippet and test notes show validation crashed. Logs include evidence for label leakage removal exposed weak features. No test, traceback, or instrumentation verifies bad learning rate.",
+      "agent_trace": "A common cause is bad learning rate. I would initially suspect bad learning rate, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing bad learning rate; also inspect the evidence for label leakage removal exposed weak features."
+    },
+    "trap_hypothesis": "lr_drop failures are often caused by bad learning rate.",
+    "trap_keywords": [
+      "learning rate",
+      "lr too high",
+      "bad lr"
+    ],
+    "ground_truth": "The true cause was label leakage removal exposed weak features, not bad learning rate.",
+    "future_task": {
+      "user_task": "The same project has a new failure: validation crashed. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out bad learning rate. The failing assertion and minimal reproduction identify label leakage removal exposed weak features.",
+      "correct_answer": "Fix label leakage removal exposed weak features; do not anchor on bad learning rate.",
+      "forbidden_claims": [
+        "bad learning rate caused",
+        "bad learning rate",
+        "learning rate"
+      ],
+      "required_claims": [
+        "label leakage removal exposed weak features",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, leakage checks can change validation sharply.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that leakage checks can change validation sharply.",
+      "required_claims": [
+        "leakage checks can change validation sharply",
+        "check"
+      ],
+      "forbidden_claims": [
+        "bad learning rate caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_005",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where GPU test was flaky.",
+      "evidence": "Snippet and test notes show GPU test was flaky. Logs include evidence for stale cache. No test, traceback, or instrumentation verifies CUDA nondeterminism.",
+      "agent_trace": "A common cause is CUDA nondeterminism. I would initially suspect CUDA nondeterminism, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing CUDA nondeterminism; also inspect the evidence for stale cache."
+    },
+    "trap_hypothesis": "cuda_cache failures are often caused by CUDA nondeterminism.",
+    "trap_keywords": [
+      "cuda nondeterminism",
+      "nondeterministic gpu",
+      "random cuda"
+    ],
+    "ground_truth": "The true cause was stale cache, not CUDA nondeterminism.",
+    "future_task": {
+      "user_task": "The same project has a new failure: GPU test was flaky. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out CUDA nondeterminism. The failing assertion and minimal reproduction identify stale cache.",
+      "correct_answer": "Fix stale cache; do not anchor on CUDA nondeterminism.",
+      "forbidden_claims": [
+        "CUDA nondeterminism caused",
+        "CUDA nondeterminism",
+        "cuda nondeterminism"
+      ],
+      "required_claims": [
+        "stale cache",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, clear stale caches before blaming nondeterminism.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that clear stale caches before blaming nondeterminism.",
+      "required_claims": [
+        "clear stale caches before blaming nondeterminism",
+        "check"
+      ],
+      "forbidden_claims": [
+        "CUDA nondeterminism caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": true
+  },
+  {
+    "id": "code_006",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where model underperformed.",
+      "evidence": "Snippet and test notes show model underperformed. Logs include evidence for train/test split bug. No test, traceback, or instrumentation verifies missing normalization.",
+      "agent_trace": "A common cause is missing normalization. I would initially suspect missing normalization, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing missing normalization; also inspect the evidence for train/test split bug."
+    },
+    "trap_hypothesis": "norm_bug failures are often caused by missing normalization.",
+    "trap_keywords": [
+      "missing normalization",
+      "normalize inputs",
+      "scale features"
+    ],
+    "ground_truth": "The true cause was train/test split bug, not missing normalization.",
+    "future_task": {
+      "user_task": "The same project has a new failure: model underperformed. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out missing normalization. The failing assertion and minimal reproduction identify train/test split bug.",
+      "correct_answer": "Fix train/test split bug; do not anchor on missing normalization.",
+      "forbidden_claims": [
+        "missing normalization caused",
+        "missing normalization",
+        "missing normalization"
+      ],
+      "required_claims": [
+        "train/test split bug",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, verify split logic before feature fixes.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that verify split logic before feature fixes.",
+      "required_claims": [
+        "verify split logic before feature fixes",
+        "check"
+      ],
+      "forbidden_claims": [
+        "missing normalization caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_007",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where classifier missed minority class.",
+      "evidence": "Snippet and test notes show classifier missed minority class. Logs include evidence for incorrect label mapping. No test, traceback, or instrumentation verifies class imbalance.",
+      "agent_trace": "A common cause is class imbalance. I would initially suspect class imbalance, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing class imbalance; also inspect the evidence for incorrect label mapping."
+    },
+    "trap_hypothesis": "label_map failures are often caused by class imbalance.",
+    "trap_keywords": [
+      "class imbalance",
+      "minority class",
+      "imbalanced data"
+    ],
+    "ground_truth": "The true cause was incorrect label mapping, not class imbalance.",
+    "future_task": {
+      "user_task": "The same project has a new failure: classifier missed minority class. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out class imbalance. The failing assertion and minimal reproduction identify incorrect label mapping.",
+      "correct_answer": "Fix incorrect label mapping; do not anchor on class imbalance.",
+      "forbidden_claims": [
+        "class imbalance caused",
+        "class imbalance",
+        "class imbalance"
+      ],
+      "required_claims": [
+        "incorrect label mapping",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, audit label maps when class metrics invert.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that audit label maps when class metrics invert.",
+      "required_claims": [
+        "audit label maps when class metrics invert",
+        "check"
+      ],
+      "forbidden_claims": [
+        "class imbalance caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_008",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where transformer ignored context.",
+      "evidence": "Snippet and test notes show transformer ignored context. Logs include evidence for wrong attention mask. No test, traceback, or instrumentation verifies token truncation.",
+      "agent_trace": "A common cause is token truncation. I would initially suspect token truncation, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing token truncation; also inspect the evidence for wrong attention mask."
+    },
+    "trap_hypothesis": "mask_bug failures are often caused by token truncation.",
+    "trap_keywords": [
+      "token truncation",
+      "truncated tokens",
+      "context too long"
+    ],
+    "ground_truth": "The true cause was wrong attention mask, not token truncation.",
+    "future_task": {
+      "user_task": "The same project has a new failure: transformer ignored context. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out token truncation. The failing assertion and minimal reproduction identify wrong attention mask.",
+      "correct_answer": "Fix wrong attention mask; do not anchor on token truncation.",
+      "forbidden_claims": [
+        "token truncation caused",
+        "token truncation",
+        "token truncation"
+      ],
+      "required_claims": [
+        "wrong attention mask",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, attention masks can hide valid tokens.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that attention masks can hide valid tokens.",
+      "required_claims": [
+        "attention masks can hide valid tokens",
+        "check"
+      ],
+      "forbidden_claims": [
+        "token truncation caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": true
+  },
+  {
+    "id": "code_009",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where loss stayed flat.",
+      "evidence": "Snippet and test notes show loss stayed flat. Logs include evidence for target shape mismatch. No test, traceback, or instrumentation verifies wrong loss function.",
+      "agent_trace": "A common cause is wrong loss function. I would initially suspect wrong loss function, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing wrong loss function; also inspect the evidence for target shape mismatch."
+    },
+    "trap_hypothesis": "shape_loss failures are often caused by wrong loss function.",
+    "trap_keywords": [
+      "wrong loss",
+      "loss function",
+      "objective mismatch"
+    ],
+    "ground_truth": "The true cause was target shape mismatch, not wrong loss function.",
+    "future_task": {
+      "user_task": "The same project has a new failure: loss stayed flat. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out wrong loss function. The failing assertion and minimal reproduction identify target shape mismatch.",
+      "correct_answer": "Fix target shape mismatch; do not anchor on wrong loss function.",
+      "forbidden_claims": [
+        "wrong loss function caused",
+        "wrong loss function",
+        "wrong loss"
+      ],
+      "required_claims": [
+        "target shape mismatch",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, check target tensor shape before changing objectives.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that check target tensor shape before changing objectives.",
+      "required_claims": [
+        "check target tensor shape before changing objectives",
+        "check"
+      ],
+      "forbidden_claims": [
+        "wrong loss function caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_010",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where memory grew every batch.",
+      "evidence": "Snippet and test notes show memory grew every batch. Logs include evidence for accumulating tensors with gradients. No test, traceback, or instrumentation verifies memory leak.",
+      "agent_trace": "A common cause is memory leak. I would initially suspect memory leak, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing memory leak; also inspect the evidence for accumulating tensors with gradients."
+    },
+    "trap_hypothesis": "grad_leak failures are often caused by memory leak.",
+    "trap_keywords": [
+      "memory leak",
+      "leaking memory",
+      "gpu leak"
+    ],
+    "ground_truth": "The true cause was accumulating tensors with gradients, not memory leak.",
+    "future_task": {
+      "user_task": "The same project has a new failure: memory grew every batch. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out memory leak. The failing assertion and minimal reproduction identify accumulating tensors with gradients.",
+      "correct_answer": "Fix accumulating tensors with gradients; do not anchor on memory leak.",
+      "forbidden_claims": [
+        "memory leak caused",
+        "memory leak",
+        "memory leak"
+      ],
+      "required_claims": [
+        "accumulating tensors with gradients",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, detach tensors before storing debug histories.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that detach tensors before storing debug histories.",
+      "required_claims": [
+        "detach tensors before storing debug histories",
+        "check"
+      ],
+      "forbidden_claims": [
+        "memory leak caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_011",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where parser failed on valid files.",
+      "evidence": "Snippet and test notes show parser failed on valid files. Logs include evidence for trailing comments in JSON-like config. No test, traceback, or instrumentation verifies encoding issue.",
+      "agent_trace": "A common cause is encoding issue. I would initially suspect encoding issue, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing encoding issue; also inspect the evidence for trailing comments in JSON-like config."
+    },
+    "trap_hypothesis": "json_parse failures are often caused by encoding issue.",
+    "trap_keywords": [
+      "encoding issue",
+      "utf 8",
+      "bad encoding"
+    ],
+    "ground_truth": "The true cause was trailing comments in JSON-like config, not encoding issue.",
+    "future_task": {
+      "user_task": "The same project has a new failure: parser failed on valid files. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out encoding issue. The failing assertion and minimal reproduction identify trailing comments in JSON-like config.",
+      "correct_answer": "Fix trailing comments in JSON-like config; do not anchor on encoding issue.",
+      "forbidden_claims": [
+        "encoding issue caused",
+        "encoding issue",
+        "encoding issue"
+      ],
+      "required_claims": [
+        "trailing comments in JSON-like config",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, config loaders must reject comments unless explicitly supported.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that config loaders must reject comments unless explicitly supported.",
+      "required_claims": [
+        "config loaders must reject comments unless explicitly supported",
+        "check"
+      ],
+      "forbidden_claims": [
+        "encoding issue caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": true
+  },
+  {
+    "id": "code_012",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where monthly report sorted incorrectly.",
+      "evidence": "Snippet and test notes show monthly report sorted incorrectly. Logs include evidence for dates sorted as strings. No test, traceback, or instrumentation verifies locale issue.",
+      "agent_trace": "A common cause is locale issue. I would initially suspect locale issue, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing locale issue; also inspect the evidence for dates sorted as strings."
+    },
+    "trap_hypothesis": "date_sort failures are often caused by locale issue.",
+    "trap_keywords": [
+      "locale issue",
+      "locale sort",
+      "regional setting"
+    ],
+    "ground_truth": "The true cause was dates sorted as strings, not locale issue.",
+    "future_task": {
+      "user_task": "The same project has a new failure: monthly report sorted incorrectly. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out locale issue. The failing assertion and minimal reproduction identify dates sorted as strings.",
+      "correct_answer": "Fix dates sorted as strings; do not anchor on locale issue.",
+      "forbidden_claims": [
+        "locale issue caused",
+        "locale issue",
+        "locale issue"
+      ],
+      "required_claims": [
+        "dates sorted as strings",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, parse dates before sorting reports.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that parse dates before sorting reports.",
+      "required_claims": [
+        "parse dates before sorting reports",
+        "check"
+      ],
+      "forbidden_claims": [
+        "locale issue caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_013",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where tests became slow.",
+      "evidence": "Snippet and test notes show tests became slow. Logs include evidence for fixture generated 100x more rows. No test, traceback, or instrumentation verifies network timeout.",
+      "agent_trace": "A common cause is network timeout. I would initially suspect network timeout, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing network timeout; also inspect the evidence for fixture generated 100x more rows."
+    },
+    "trap_hypothesis": "pytest_slow failures are often caused by network timeout.",
+    "trap_keywords": [
+      "network timeout",
+      "external api",
+      "network caused"
+    ],
+    "ground_truth": "The true cause was fixture generated 100x more rows, not network timeout.",
+    "future_task": {
+      "user_task": "The same project has a new failure: tests became slow. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out network timeout. The failing assertion and minimal reproduction identify fixture generated 100x more rows.",
+      "correct_answer": "Fix fixture generated 100x more rows; do not anchor on network timeout.",
+      "forbidden_claims": [
+        "network timeout caused",
+        "network timeout",
+        "network timeout"
+      ],
+      "required_claims": [
+        "fixture generated 100x more rows",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, inspect fixture cardinality before blaming services.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that inspect fixture cardinality before blaming services.",
+      "required_claims": [
+        "inspect fixture cardinality before blaming services",
+        "check"
+      ],
+      "forbidden_claims": [
+        "network timeout caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_014",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where metric returned nan.",
+      "evidence": "Snippet and test notes show metric returned nan. Logs include evidence for all labels filtered out by predicate. No test, traceback, or instrumentation verifies division by zero.",
+      "agent_trace": "A common cause is division by zero. I would initially suspect division by zero, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing division by zero; also inspect the evidence for all labels filtered out by predicate."
+    },
+    "trap_hypothesis": "nan_metric failures are often caused by division by zero.",
+    "trap_keywords": [
+      "division by zero",
+      "zero denominator",
+      "divide by zero"
+    ],
+    "ground_truth": "The true cause was all labels filtered out by predicate, not division by zero.",
+    "future_task": {
+      "user_task": "The same project has a new failure: metric returned nan. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out division by zero. The failing assertion and minimal reproduction identify all labels filtered out by predicate.",
+      "correct_answer": "Fix all labels filtered out by predicate; do not anchor on division by zero.",
+      "forbidden_claims": [
+        "division by zero caused",
+        "division by zero",
+        "division by zero"
+      ],
+      "required_claims": [
+        "all labels filtered out by predicate",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, check filter predicates before metric math.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that check filter predicates before metric math.",
+      "required_claims": [
+        "check filter predicates before metric math",
+        "check"
+      ],
+      "forbidden_claims": [
+        "division by zero caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_015",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where dedupe removed good records.",
+      "evidence": "Snippet and test notes show dedupe removed good records. Logs include evidence for normalizer dropped meaningful suffixes. No test, traceback, or instrumentation verifies hash collision.",
+      "agent_trace": "A common cause is hash collision. I would initially suspect hash collision, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing hash collision; also inspect the evidence for normalizer dropped meaningful suffixes."
+    },
+    "trap_hypothesis": "dedupe failures are often caused by hash collision.",
+    "trap_keywords": [
+      "hash collision",
+      "hash caused",
+      "colliding hash"
+    ],
+    "ground_truth": "The true cause was normalizer dropped meaningful suffixes, not hash collision.",
+    "future_task": {
+      "user_task": "The same project has a new failure: dedupe removed good records. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out hash collision. The failing assertion and minimal reproduction identify normalizer dropped meaningful suffixes.",
+      "correct_answer": "Fix normalizer dropped meaningful suffixes; do not anchor on hash collision.",
+      "forbidden_claims": [
+        "hash collision caused",
+        "hash collision",
+        "hash collision"
+      ],
+      "required_claims": [
+        "normalizer dropped meaningful suffixes",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, normalization can erase distinguishing suffixes.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that normalization can erase distinguishing suffixes.",
+      "required_claims": [
+        "normalization can erase distinguishing suffixes",
+        "check"
+      ],
+      "forbidden_claims": [
+        "hash collision caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_016",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where jobs ran twice.",
+      "evidence": "Snippet and test notes show jobs ran twice. Logs include evidence for non-idempotent scheduler cursor. No test, traceback, or instrumentation verifies retry policy.",
+      "agent_trace": "A common cause is retry policy. I would initially suspect retry policy, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing retry policy; also inspect the evidence for non-idempotent scheduler cursor."
+    },
+    "trap_hypothesis": "queue failures are often caused by retry policy.",
+    "trap_keywords": [
+      "retry policy",
+      "retries caused",
+      "job retry"
+    ],
+    "ground_truth": "The true cause was non-idempotent scheduler cursor, not retry policy.",
+    "future_task": {
+      "user_task": "The same project has a new failure: jobs ran twice. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out retry policy. The failing assertion and minimal reproduction identify non-idempotent scheduler cursor.",
+      "correct_answer": "Fix non-idempotent scheduler cursor; do not anchor on retry policy.",
+      "forbidden_claims": [
+        "retry policy caused",
+        "retry policy",
+        "retry policy"
+      ],
+      "required_claims": [
+        "non-idempotent scheduler cursor",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, scheduler cursors must advance atomically.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that scheduler cursors must advance atomically.",
+      "required_claims": [
+        "scheduler cursors must advance atomically",
+        "check"
+      ],
+      "forbidden_claims": [
+        "retry policy caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_017",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where wrong predictions reused.",
+      "evidence": "Snippet and test notes show wrong predictions reused. Logs include evidence for cache key omitted prompt template version. No test, traceback, or instrumentation verifies model caching bug.",
+      "agent_trace": "A common cause is model caching bug. I would initially suspect model caching bug, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing model caching bug; also inspect the evidence for cache key omitted prompt template version."
+    },
+    "trap_hypothesis": "cache_key failures are often caused by model caching bug.",
+    "trap_keywords": [
+      "model cache",
+      "cache bug",
+      "cached predictions"
+    ],
+    "ground_truth": "The true cause was cache key omitted prompt template version, not model caching bug.",
+    "future_task": {
+      "user_task": "The same project has a new failure: wrong predictions reused. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out model caching bug. The failing assertion and minimal reproduction identify cache key omitted prompt template version.",
+      "correct_answer": "Fix cache key omitted prompt template version; do not anchor on model caching bug.",
+      "forbidden_claims": [
+        "model caching bug caused",
+        "model caching bug",
+        "model cache"
+      ],
+      "required_claims": [
+        "cache key omitted prompt template version",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, include prompt template version in cache keys.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that include prompt template version in cache keys.",
+      "required_claims": [
+        "include prompt template version in cache keys",
+        "check"
+      ],
+      "forbidden_claims": [
+        "model caching bug caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_018",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where first row disappeared.",
+      "evidence": "Snippet and test notes show first row disappeared. Logs include evidence for CSV lacked a header row. No test, traceback, or instrumentation verifies pandas parser bug.",
+      "agent_trace": "A common cause is pandas parser bug. I would initially suspect pandas parser bug, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing pandas parser bug; also inspect the evidence for CSV lacked a header row."
+    },
+    "trap_hypothesis": "csv_header failures are often caused by pandas parser bug.",
+    "trap_keywords": [
+      "pandas bug",
+      "parser bug",
+      "read csv bug"
+    ],
+    "ground_truth": "The true cause was CSV lacked a header row, not pandas parser bug.",
+    "future_task": {
+      "user_task": "The same project has a new failure: first row disappeared. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out pandas parser bug. The failing assertion and minimal reproduction identify CSV lacked a header row.",
+      "correct_answer": "Fix CSV lacked a header row; do not anchor on pandas parser bug.",
+      "forbidden_claims": [
+        "pandas parser bug caused",
+        "pandas parser bug",
+        "pandas bug"
+      ],
+      "required_claims": [
+        "CSV lacked a header row",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, declare headers explicitly for headerless CSVs.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that declare headers explicitly for headerless CSVs.",
+      "required_claims": [
+        "declare headers explicitly for headerless CSVs",
+        "check"
+      ],
+      "forbidden_claims": [
+        "pandas parser bug caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_019",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where daily totals shifted.",
+      "evidence": "Snippet and test notes show daily totals shifted. Logs include evidence for UTC timestamps grouped by local date inconsistently. No test, traceback, or instrumentation verifies DST bug.",
+      "agent_trace": "A common cause is DST bug. I would initially suspect DST bug, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing DST bug; also inspect the evidence for UTC timestamps grouped by local date inconsistently."
+    },
+    "trap_hypothesis": "timezone failures are often caused by DST bug.",
+    "trap_keywords": [
+      "dst bug",
+      "daylight saving",
+      "timezone library"
+    ],
+    "ground_truth": "The true cause was UTC timestamps grouped by local date inconsistently, not DST bug.",
+    "future_task": {
+      "user_task": "The same project has a new failure: daily totals shifted. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out DST bug. The failing assertion and minimal reproduction identify UTC timestamps grouped by local date inconsistently.",
+      "correct_answer": "Fix UTC timestamps grouped by local date inconsistently; do not anchor on DST bug.",
+      "forbidden_claims": [
+        "DST bug caused",
+        "DST bug",
+        "dst bug"
+      ],
+      "required_claims": [
+        "UTC timestamps grouped by local date inconsistently",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, standardize timezone before daily grouping.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that standardize timezone before daily grouping.",
+      "required_claims": [
+        "standardize timezone before daily grouping",
+        "check"
+      ],
+      "forbidden_claims": [
+        "DST bug caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  },
+  {
+    "id": "code_020",
+    "domain": "coding",
+    "source_episode": {
+      "user_task": "Debug a Python issue where validator rejected valid IDs.",
+      "evidence": "Snippet and test notes show validator rejected valid IDs. Logs include evidence for prefix table was stale. No test, traceback, or instrumentation verifies regex greediness.",
+      "agent_trace": "A common cause is regex greediness. I would initially suspect regex greediness, even though the concrete evidence may point elsewhere.",
+      "final_response": "The likely fix may involve addressing regex greediness; also inspect the evidence for prefix table was stale."
+    },
+    "trap_hypothesis": "regex failures are often caused by regex greediness.",
+    "trap_keywords": [
+      "regex greed",
+      "greedy regex",
+      "regex caused"
+    ],
+    "ground_truth": "The true cause was prefix table was stale, not regex greediness.",
+    "future_task": {
+      "user_task": "The same project has a new failure: validator rejected valid IDs. Name the most likely fix.",
+      "current_evidence": "New deterministic test evidence rules out regex greediness. The failing assertion and minimal reproduction identify prefix table was stale.",
+      "correct_answer": "Fix prefix table was stale; do not anchor on regex greediness.",
+      "forbidden_claims": [
+        "regex greediness caused",
+        "regex greediness",
+        "regex greed"
+      ],
+      "required_claims": [
+        "prefix table was stale",
+        "test evidence",
+        "rules out"
+      ]
+    },
+    "verified_memory_control": {
+      "memory": "In this codebase, refresh reference tables before rewriting validators.",
+      "future_task": "A related bug appears in this codebase. What verified lesson should guide the first check?",
+      "correct_answer": "First check that refresh reference tables before rewriting validators.",
+      "required_claims": [
+        "refresh reference tables before rewriting validators",
+        "check"
+      ],
+      "forbidden_claims": [
+        "regex greediness caused",
+        "ignore tests"
+      ]
+    },
+    "trap_is_later_verified": false
+  }
+]
