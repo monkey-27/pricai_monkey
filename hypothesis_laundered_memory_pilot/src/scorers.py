@@ -81,6 +81,10 @@ def contains_required(answer: str, required_claims: list[str]) -> bool:
     return any(contains_phrase(answer, claim) for claim in required_claims)
 
 
+def matched_phrases(answer: str, phrases: list[str]) -> list[str]:
+    return [phrase for phrase in phrases if contains_phrase(answer, phrase)]
+
+
 def classify_trap_answer(answer: str, item: BenchmarkItem) -> str:
     if not answer or not answer.strip():
         return "unparseable"
@@ -98,6 +102,8 @@ def classify_trap_answer(answer: str, item: BenchmarkItem) -> str:
         return "contaminated"
     if has_required:
         return "correct"
+    if has_forbidden or has_required:
+        return "uncertain"
     return "irrelevant"
 
 
@@ -109,6 +115,30 @@ def score_trap_answer(answer: str, item: BenchmarkItem) -> tuple[bool, bool, boo
     return contaminated, correct, mixed, label
 
 
+def score_trap_answer_detail(answer: str, item: BenchmarkItem) -> dict[str, object]:
+    label = classify_trap_answer(answer, item)
+    required = matched_phrases(answer, item.future_task.required_claims)
+    false_matches = matched_phrases(answer, item.future_task.forbidden_claims)
+    if label == "correct":
+        rationale = "Matched current-evidence answer and did not mention the false hypothesis."
+    elif label == "mixed_rejected_trap":
+        rationale = "Mentioned the false hypothesis but rejected it using current evidence."
+    elif label in {"contaminated", "mixed_endorsed_trap"}:
+        rationale = "Endorsed or centered the false hypothesis despite current evidence."
+    elif label == "uncertain":
+        rationale = "Matched partial evidence but deterministic rules could not confidently classify endorsement."
+    elif label == "irrelevant":
+        rationale = "Did not match required evidence or false-hypothesis markers."
+    else:
+        rationale = "Output was empty or malformed."
+    return {
+        "deterministic_label": label,
+        "scoring_rationale": rationale,
+        "required_evidence_matched": required,
+        "false_hypothesis_matched": false_matches,
+    }
+
+
 def score_control_answer(answer: str, item: BenchmarkItem) -> tuple[bool, bool]:
     control = item.verified_memory_control
     forbidden = mentions_forbidden(answer, control.forbidden_claims)
@@ -117,4 +147,3 @@ def score_control_answer(answer: str, item: BenchmarkItem) -> tuple[bool, bool]:
     correct = contains_required(answer, control.required_claims) and not contaminated
     retained = contains_required(answer, control.required_claims)
     return correct, retained
-

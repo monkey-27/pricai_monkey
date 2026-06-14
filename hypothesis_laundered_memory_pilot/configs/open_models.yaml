@@ -1,0 +1,13 @@
+transformers:
+  smoke:
+    - sshleifer/tiny-gpt2
+  recommended_small:
+    - Qwen/Qwen2.5-1.5B-Instruct
+    - Qwen/Qwen2.5-3B-Instruct
+  recommended_main:
+    - Qwen/Qwen2.5-7B-Instruct
+    - Qwen/Qwen2.5-Coder-7B-Instruct
+  optional_stronger:
+    - Qwen/Qwen2.5-14B-Instruct
+    - Qwen/Qwen2.5-Coder-14B-Instruct
+    - Qwen/Qwen2.5-32B-Instruct

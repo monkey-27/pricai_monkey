@@ -14,6 +14,13 @@ WARNING: This run used mock mode. Mock outputs are programmed to follow the expe
 
 Only non-mock runs against open/local models should be treated as preliminary experimental evidence. Even those require manual audit and more than one model before paper-level claims.
 
+Runs are classified automatically:
+
+- `mock_pipeline_validation`: mock mode, never scientific evidence.
+- `plumbing_smoke`: tiny/non-instruct models or `n < 40`, never scientific evidence.
+- `preliminary_experiment`: real instruct/chat model with `n >= 40`.
+- `paper_candidate_evidence`: real instruct/chat model with `n >= 80` and completed manual audit.
+
 ## Benchmark
 
 The generated seed benchmark has 80 examples:
@@ -52,6 +59,12 @@ python run_pilot.py --mock --n 20 --out outputs/mock_smoke
 
 This validates code paths only. Do not cite mock numbers as evidence.
 
+Full deployable mock validation:
+
+```bash
+scripts/run_mock_full.sh
+```
+
 ## Local OpenAI-Compatible Run
 
 Use this with vLLM, llama.cpp server, LM Studio, Ollama OpenAI-compatible mode, or any local OpenAI-compatible server:
@@ -88,6 +101,26 @@ python run_pilot.py \
 
 Small-model smoke tests, such as `scripts/run_transformers_small_smoke.sh`, are useful for plumbing but are not final scientific evidence.
 
+Model configs live in:
+
+```text
+configs/open_models.yaml
+```
+
+The CLI supports:
+
+```bash
+python run_pilot.py \
+  --backend transformers \
+  --models-config configs/open_models.yaml \
+  --model-tier recommended_small \
+  --allow-download false \
+  --n 80 \
+  --out outputs/real_configured_model
+```
+
+When `--allow-download false`, Transformers uses local files only and unavailable models should be skipped by the sweep runner rather than faked.
+
 ## Memory Methods
 
 Default methods:
@@ -104,6 +137,7 @@ Each run writes:
 
 - `run_metadata.json`
 - `results_raw.jsonl`
+- `case_scores.jsonl`
 - `memory_outputs.jsonl`
 - `downstream_outputs.jsonl`
 - `summary.csv`
@@ -161,13 +195,31 @@ python -m src.audit_summarizer \
   --out outputs/<run>/manual_audit_summary.md
 ```
 
+The audit summarizer reports exact label agreement, contamination agreement, false-promotion agreement when annotated, and examples where automatic scoring disagrees with human labels.
+
 ## Scripts
 
 ```bash
 scripts/run_mock_full.sh
+scripts/run_smoke_tiny_transformers.sh
 scripts/run_local_openai_compatible.sh
+scripts/run_transformers_model.sh
 scripts/run_transformers_qwen7b.sh
 scripts/run_transformers_small_smoke.sh
+scripts/run_recommended_open_models.sh
+scripts/run_all_available.sh
+```
+
+One-command local sweep:
+
+```bash
+scripts/run_all_available.sh
+```
+
+It runs mock validation, a tiny Transformers smoke if possible, probes a local OpenAI-compatible endpoint, checks configured HF models, skips unavailable models with reasons, and writes:
+
+```text
+outputs/experiment_index.md
 ```
 
 ## Continuation Criteria
@@ -188,6 +240,18 @@ source_aware and quote_required do not already solve the problem
 
 If source-aware or quote-required provenance performs almost as well as evidence-labeled enforcement, the proposed method is probably not novel enough.
 
+Reports include `Research Verdict` with one of:
+
+```text
+MOCK_ONLY
+PLUMBING_ONLY
+KILL
+REDESIGN
+CONTINUE_WEAK
+CONTINUE_STRONG
+PAPER_CANDIDATE
+```
+
 ## Git Policy For Outputs
 
 Outputs are ignored by default except `.gitkeep`. Do not commit huge real-model caches by accident.
@@ -195,7 +259,7 @@ Outputs are ignored by default except `.gitkeep`. Do not commit huge real-model 
 To commit selected small summaries:
 
 ```bash
-git add outputs/<run>/summary.csv outputs/<run>/summary.md outputs/<run>/manual_audit_sample.csv
+git add outputs/<run>/summary.csv outputs/<run>/summary.md outputs/<run>/run_metadata.json outputs/<run>/manual_audit_sample.csv outputs/experiment_index.md
 ```
 
 ## Test Commands
@@ -206,4 +270,3 @@ python -m compileall -q src run_pilot.py
 python -m pytest -q
 git diff --check
 ```
-

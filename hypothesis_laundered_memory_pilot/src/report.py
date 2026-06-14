@@ -35,7 +35,7 @@ def summarize(scores: list[ScoreRecord], methods: list[str]) -> list[dict[str, o
     rows: list[dict[str, object]] = []
     for method in methods:
         group = by_method.get(method, [])
-        verified = [s for s in group if _item_subtype(s) == "verified_hypothesis"]
+        verified = [s for s in group if s.case_subtype == "verified_hypothesis"]
         rows.append(
             {
                 "method": method,
@@ -53,11 +53,6 @@ def summarize(scores: list[ScoreRecord], methods: list[str]) -> list[dict[str, o
             }
         )
     return rows
-
-
-def _item_subtype(score: ScoreRecord) -> str:
-    return "verified_hypothesis" if score.confirmed_hypothesis_promoted or score.tentative_overblocked else ""
-
 
 def rate(values: list[bool]) -> float:
     return sum(1 for v in values if v) / len(values) if values else 0.0
@@ -88,6 +83,8 @@ def render_markdown(
             "",
             f"- mock: `{str(mock).lower()}`",
             f"- scientific_evidence: `{str(bool(metadata.get('scientific_evidence'))).lower()}`",
+            f"- run_role: `{metadata.get('run_role')}`",
+            f"- classification_reason: `{metadata.get('classification_reason')}`",
             f"- backend: `{metadata.get('backend')}`",
             f"- model: `{metadata.get('model')}`",
             f"- hf_model: `{metadata.get('hf_model')}`",
@@ -167,9 +164,12 @@ def render_markdown(
     for label, passed in criteria:
         mark = "PASS" if passed else "FAIL"
         lines.append(f"- {mark}: {label}")
-    lines.extend(["", "## Blunt Research Verdict", "", _verdict(rows, mock), "", "## Scientific Interpretation", ""])
+    lines.extend(["", "## Research Verdict", "", _verdict(rows, metadata), "", "## Scientific Interpretation", ""])
+    run_role = str(metadata.get("run_role", ""))
     if mock:
         lines.append("This run validates code paths only. It must not be cited as evidence for the research claim.")
+    elif run_role == "plumbing_smoke":
+        lines.append("This run used a tiny, non-instruct, or too-small model setup. It validates model/backend plumbing only. It is not evidence for or against the research claim.")
     else:
         lines.append("This run is preliminary evidence, but it still requires manual audit and additional models before paper-level claims.")
     lines.append("")
@@ -218,11 +218,14 @@ def evaluate_criteria(rows: list[dict[str, object]]) -> list[tuple[str, bool]]:
     ]
 
 
-def _verdict(rows: list[dict[str, object]], mock: bool) -> str:
-    if mock:
-        return "Mock run only: useful for pipeline validation, useless as research evidence."
+def _verdict(rows: list[dict[str, object]], metadata: dict[str, Any]) -> str:
+    base = str(metadata.get("research_verdict", "REDESIGN"))
+    if base in {"MOCK_ONLY", "PLUMBING_ONLY"}:
+        return f"{base}: {metadata.get('classification_reason')}"
     criteria = evaluate_criteria(rows)
     if all(passed for _, passed in criteria):
-        return "Continue, but only after manual audit and at least one additional open model."
+        if base == "PAPER_CANDIDATE":
+            return "PAPER_CANDIDATE: criteria pass, but claims still need paper-quality audit text."
+        return "CONTINUE_STRONG: criteria pass, but replicate on additional open models before paper claims."
     failed = "; ".join(label for label, passed in criteria if not passed)
-    return f"Do not scale yet. Failed criteria: {failed}."
+    return f"REDESIGN: failed criteria: {failed}."

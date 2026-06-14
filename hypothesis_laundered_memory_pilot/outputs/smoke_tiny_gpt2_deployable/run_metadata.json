@@ -1,0 +1,38 @@
+{
+  "allow_download": false,
+  "backend": "transformers",
+  "base_url": null,
+  "classification_reason": "Run is too small or uses a non-instruct/tiny model.",
+  "device": "auto",
+  "domains": [
+    "coding",
+    "data_analysis",
+    "research_assistant"
+  ],
+  "dtype": "auto",
+  "hf_model": "sshleifer/tiny-gpt2",
+  "judge_backend": "none",
+  "judge_model": "same",
+  "manual_audit_completed": false,
+  "max_new_tokens": 100,
+  "methods": [
+    "no_memory",
+    "naive",
+    "reflection",
+    "source_aware",
+    "quote_required",
+    "evidence_labeled_no_enforcement",
+    "evidence_labeled_stable_only",
+    "evidence_labeled_enforced"
+  ],
+  "mock": false,
+  "model": "sshleifer/tiny-gpt2",
+  "n_items": 5,
+  "n_requested": 5,
+  "research_verdict": "PLUMBING_ONLY",
+  "run_role": "plumbing_smoke",
+  "scientific_evidence": false,
+  "seed": 42,
+  "temperature": 0.0,
+  "top_p": 1.0
+}

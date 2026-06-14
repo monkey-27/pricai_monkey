@@ -1,0 +1,5 @@
+{"model": "local-open-model", "reason": "No server reachable at http://localhost:8000/v1", "run_name": "local_openai_compatible_n80"}
+{"model": "Qwen/Qwen2.5-1.5B-Instruct", "reason": "Model not present in local Hugging Face cache and downloads are disabled by runner.", "run_name": "real_qwen_qwen2_5_1_5b_instruct_n80"}
+{"model": "Qwen/Qwen2.5-3B-Instruct", "reason": "Model not present in local Hugging Face cache and downloads are disabled by runner.", "run_name": "real_qwen_qwen2_5_3b_instruct_n80"}
+{"model": "Qwen/Qwen2.5-7B-Instruct", "reason": "Model not present in local Hugging Face cache and downloads are disabled by runner.", "run_name": "real_qwen_qwen2_5_7b_instruct_n80"}
+{"model": "Qwen/Qwen2.5-Coder-7B-Instruct", "reason": "Model not present in local Hugging Face cache and downloads are disabled by runner.", "run_name": "real_qwen_qwen2_5_coder_7b_instruct_n80"}

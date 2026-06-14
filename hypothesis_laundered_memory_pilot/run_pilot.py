@@ -3,11 +3,16 @@ from __future__ import annotations
 import argparse
 
 from src.experiment import ALL_DOMAINS, ALL_METHODS, DEFAULT_METHODS, run_experiment
+from src.model_config import load_model_config, select_models
 from src.report import write_summary
 
 
 def parse_csv(value: str) -> list[str]:
     return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def parse_bool(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "y"}
 
 
 def main() -> None:
@@ -17,6 +22,9 @@ def main() -> None:
     parser.add_argument("--api-key", default=None)
     parser.add_argument("--model", default="gpt-4.1-mini")
     parser.add_argument("--hf-model", default=None)
+    parser.add_argument("--models-config", default="configs/open_models.yaml")
+    parser.add_argument("--model-tier", default="recommended_main", choices=["smoke", "recommended_small", "recommended_main", "optional_stronger", "all"])
+    parser.add_argument("--allow-download", default="false")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--dtype", default="auto")
     parser.add_argument("--n", type=int, default=80)
@@ -35,6 +43,16 @@ def main() -> None:
     args = parser.parse_args()
 
     max_new_tokens = args.max_tokens if args.max_tokens is not None else args.max_new_tokens
+    allow_download = parse_bool(args.allow_download)
+    hf_model = args.hf_model
+    if args.backend == "transformers" and hf_model is None:
+        config = load_model_config(args.models_config)
+        selected = select_models(config, args.model_tier)
+        if not selected:
+            raise SystemExit(f"No models found for tier {args.model_tier} in {args.models_config}")
+        hf_model = selected[0]
+        if args.model == "gpt-4.1-mini":
+            args.model = hf_model
     domains = parse_csv(args.domains)
     methods = parse_csv(args.methods)
     unknown_domains = sorted(set(domains) - set(ALL_DOMAINS))
@@ -57,12 +75,13 @@ def main() -> None:
         backend=args.backend,
         base_url=args.base_url,
         api_key=args.api_key,
-        hf_model=args.hf_model,
+        hf_model=hf_model,
         device=args.device,
         dtype=args.dtype,
         audit_sample_size=args.audit_sample_size,
         judge_backend=args.judge_backend,
         judge_model=args.judge_model,
+        allow_download=allow_download,
     )
     write_summary(args.out, scores, items, methods, metadata)
     print(f"Wrote pilot outputs to {args.out}")
@@ -70,4 +89,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

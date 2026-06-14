@@ -95,6 +95,7 @@ class MemoryRecord:
 class ScoreRecord:
     item_id: str
     domain: str
+    case_subtype: str
     method: str
     false_evidence_promotion: bool
     downstream_contamination: bool
@@ -103,6 +104,9 @@ class ScoreRecord:
     useful_memory_retention: bool
     mixed: bool
     downstream_label: str = "unparseable"
+    scoring_rationale: str = ""
+    required_evidence_matched: list[str] = field(default_factory=list)
+    false_hypothesis_matched: list[str] = field(default_factory=list)
     confirmed_hypothesis_promoted: bool = False
     tentative_overblocked: bool = False
     memories: list[dict[str, Any]] = field(default_factory=list)

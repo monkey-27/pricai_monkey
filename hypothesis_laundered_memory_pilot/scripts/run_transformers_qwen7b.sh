@@ -7,4 +7,5 @@ python run_pilot.py \
   --model Qwen/Qwen2.5-7B-Instruct \
   --n 80 \
   --out outputs/real_qwen25_7b_001 \
-  --temperature 0
+  --temperature 0 \
+  --allow-download "${ALLOW_DOWNLOAD:-false}"

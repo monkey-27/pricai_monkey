@@ -25,6 +25,7 @@ class LLMClient:
         top_p: float = 1.0,
         max_new_tokens: int = 800,
         seed: int = 42,
+        allow_download: bool = True,
     ) -> None:
         self.model = model
         self.mock = mock
@@ -38,6 +39,7 @@ class LLMClient:
         self.top_p = top_p
         self.max_new_tokens = max_new_tokens
         self.seed = seed
+        self.allow_download = allow_download
         self.cache_path = Path(out_dir) / "llm_cache.jsonl"
         self.cache: dict[str, str] = {
             row["key"]: row["response"] for row in read_jsonl(self.cache_path) if "key" in row and "response" in row
@@ -89,7 +91,7 @@ class LLMClient:
             "max_new_tokens": self.max_new_tokens,
             "seed": self.seed,
             "mock": self.mock,
-            "scientific_evidence": not self.mock,
+            "allow_download": self.allow_download,
         }
 
     def _cache_payload(self, system: str, user: str) -> dict[str, Any]:
@@ -107,6 +109,7 @@ class LLMClient:
             "max_new_tokens": self.max_new_tokens,
             "seed": self.seed,
             "mock": self.mock,
+            "allow_download": self.allow_download,
             "mock_version": 4,
         }
 
@@ -144,12 +147,17 @@ class LLMClient:
             torch_dtype = "auto"
             if self.dtype != "auto":
                 torch_dtype = getattr(torch, self.dtype)
-            self._hf_tokenizer = AutoTokenizer.from_pretrained(self.hf_model, trust_remote_code=True)
+            self._hf_tokenizer = AutoTokenizer.from_pretrained(
+                self.hf_model,
+                trust_remote_code=True,
+                local_files_only=not self.allow_download,
+            )
             model = AutoModelForCausalLM.from_pretrained(
                 self.hf_model,
                 device_map=self.device,
                 torch_dtype=torch_dtype,
                 trust_remote_code=True,
+                local_files_only=not self.allow_download,
             )
             self._hf_pipeline = pipeline("text-generation", model=model, tokenizer=self._hf_tokenizer)
         prompt = self._format_transformers_prompt(system, user)

@@ -14,10 +14,12 @@ from .prompts import canonical_method, downstream_control_prompt, downstream_tra
 from .scorers import (
     confirmed_hypothesis_promoted,
     false_evidence_promotion,
+    score_trap_answer_detail,
     score_control_answer,
     score_trap_answer,
     tentative_overblocked,
 )
+from .run_classifier import classify_run
 from .utils import ensure_dir, parse_json_lenient, write_jsonl
 
 
@@ -55,6 +57,7 @@ def run_experiment(
     audit_sample_size: int,
     judge_backend: str,
     judge_model: str,
+    allow_download: bool = True,
 ) -> tuple[list[ScoreRecord], list[BenchmarkItem], dict[str, Any]]:
     out_dir = ensure_dir(out)
     data_path = Path(__file__).resolve().parents[1] / "data" / "benchmark_seed.json"
@@ -73,6 +76,7 @@ def run_experiment(
         top_p=top_p,
         max_new_tokens=max_new_tokens,
         seed=seed,
+        allow_download=allow_download,
     )
     metadata = {
         **client.metadata(),
@@ -82,7 +86,9 @@ def run_experiment(
         "methods": methods,
         "judge_backend": judge_backend,
         "judge_model": judge_model,
+        "manual_audit_completed": False,
     }
+    metadata.update(classify_run(metadata))
     (out_dir / "run_metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
 
     memory_rows: list[dict[str, Any]] = []
@@ -125,10 +131,12 @@ def run_experiment(
             control_answer = client.complete("You are a careful analyst.", control_prompt, purpose=f"{canonical}:control")
 
             contaminated, trap_correct, mixed, label = score_trap_answer(trap_answer, item)
+            detail = score_trap_answer_detail(trap_answer, item)
             control_correct, retained = score_control_answer(control_answer, item)
             score = ScoreRecord(
                 item_id=item.id,
                 domain=item.domain,
+                case_subtype=item.case_subtype,
                 method=method,
                 false_evidence_promotion=false_evidence_promotion(canonical, memories, item),
                 downstream_contamination=contaminated,
@@ -137,6 +145,9 @@ def run_experiment(
                 useful_memory_retention=retained,
                 mixed=mixed,
                 downstream_label=label,
+                scoring_rationale=detail["scoring_rationale"],
+                required_evidence_matched=detail["required_evidence_matched"],
+                false_hypothesis_matched=detail["false_hypothesis_matched"],
                 confirmed_hypothesis_promoted=confirmed_hypothesis_promoted(memories, item),
                 tentative_overblocked=tentative_overblocked(memories, item),
                 memories=[asdict(m) for m in memories],
@@ -153,14 +164,31 @@ def run_experiment(
                     "trap_answer": trap_answer,
                     "control_answer": control_answer,
                     "auto_label": label,
+                    "scoring_rationale": detail["scoring_rationale"],
                 }
             )
 
     write_jsonl(out_dir / "memory_outputs.jsonl", memory_rows)
     write_jsonl(out_dir / "downstream_outputs.jsonl", downstream_rows)
     write_jsonl(out_dir / "results_raw.jsonl", [score.to_dict() for score in scores])
+    write_jsonl(out_dir / "case_scores.jsonl", [case_score_row(score) for score in scores])
     write_manual_audit(out_dir, items, scores, audit_sample_size, seed)
     return scores, items, metadata
+
+
+def case_score_row(score: ScoreRecord) -> dict[str, Any]:
+    return {
+        "item_id": score.item_id,
+        "domain": score.domain,
+        "case_subtype": score.case_subtype,
+        "method": score.method,
+        "memories": score.memories,
+        "downstream_answer": score.trap_answer,
+        "deterministic_label": score.downstream_label,
+        "scoring_rationale": score.scoring_rationale,
+        "required_evidence_matched": score.required_evidence_matched,
+        "false_hypothesis_matched": score.false_hypothesis_matched,
+    }
 
 
 def extract_memories(client: LLMClient, method: str, item: BenchmarkItem) -> list[MemoryRecord]:
@@ -218,6 +246,7 @@ def write_manual_audit(out_dir: Path, items: list[BenchmarkItem], scores: list[S
         ][:5]
     )
     selected.extend([s for s in scores if s.method in {"source_aware", "quote_required"}][:5])
+    selected.extend([s for s in scores if s.downstream_label == "uncertain"][:5])
     rng = random.Random(seed)
     remaining = [s for s in scores if (s.item_id, s.method) not in {(x.item_id, x.method) for x in selected}]
     rng.shuffle(remaining)
@@ -233,7 +262,9 @@ def write_manual_audit(out_dir: Path, items: list[BenchmarkItem], scores: list[S
         "memories",
         "answer",
         "auto_label",
+        "auto_false_promotion",
         "human_label",
+        "human_false_promotion",
         "human_notes",
     ]
     with (out_dir / "manual_audit_sample.csv").open("w", encoding="utf-8", newline="") as f:
@@ -252,13 +283,16 @@ def write_manual_audit(out_dir: Path, items: list[BenchmarkItem], scores: list[S
                     "memories": json.dumps(score.memories, ensure_ascii=True),
                     "answer": score.trap_answer,
                     "auto_label": score.downstream_label,
+                    "auto_false_promotion": str(score.false_evidence_promotion).lower(),
                     "human_label": "",
+                    "human_false_promotion": "",
                     "human_notes": "",
                 }
             )
     (out_dir / "manual_audit_instructions.md").write_text(
         "# Manual Audit Instructions\n\n"
-        "Fill `human_label` with one of: correct, contaminated, mixed_rejected_trap, mixed_endorsed_trap, irrelevant, unparseable.\n\n"
+        "Fill `human_label` with one of: correct, contaminated, mixed_rejected_trap, mixed_endorsed_trap, irrelevant, uncertain, unparseable.\n\n"
+        "Fill `human_false_promotion` with true/false when you can judge whether memory extraction promoted an unsupported hypothesis as stable.\n\n"
         "Use `human_notes` for a one-sentence rationale. Judge whether the answer follows the current evidence rather than an unsupported memory.\n",
         encoding="utf-8",
     )

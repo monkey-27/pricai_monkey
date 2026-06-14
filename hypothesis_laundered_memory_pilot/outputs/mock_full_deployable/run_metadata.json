@@ -1,0 +1,38 @@
+{
+  "allow_download": false,
+  "backend": "mock",
+  "base_url": null,
+  "classification_reason": "Mock outputs are programmed and validate code paths only.",
+  "device": "auto",
+  "domains": [
+    "coding",
+    "data_analysis",
+    "research_assistant"
+  ],
+  "dtype": "auto",
+  "hf_model": null,
+  "judge_backend": "none",
+  "judge_model": "same",
+  "manual_audit_completed": false,
+  "max_new_tokens": 800,
+  "methods": [
+    "no_memory",
+    "naive",
+    "reflection",
+    "source_aware",
+    "quote_required",
+    "evidence_labeled_no_enforcement",
+    "evidence_labeled_stable_only",
+    "evidence_labeled_enforced"
+  ],
+  "mock": true,
+  "model": "gpt-4.1-mini",
+  "n_items": 80,
+  "n_requested": 80,
+  "research_verdict": "MOCK_ONLY",
+  "run_role": "mock_pipeline_validation",
+  "scientific_evidence": false,
+  "seed": 42,
+  "temperature": 0.0,
+  "top_p": 1.0
+}

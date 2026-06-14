@@ -8,7 +8,9 @@ import pytest
 from src.benchmark import build_seed_items
 from src.experiment import DEFAULT_METHODS, run_experiment, with_mock_meta
 from src.llm import LLMClient
+from src.model_config import load_model_config, select_models
 from src.prompts import downstream_trap_prompt, memory_prompt
+from src.run_classifier import classify_run
 from src.scorers import classify_trap_answer
 from src.utils import parse_json_lenient
 
@@ -69,10 +71,12 @@ def test_evidence_labeled_parsing_valid_json(tmp_path: Path) -> None:
         audit_sample_size=1,
         judge_backend="none",
         judge_model="same",
+        allow_download=True,
     )
     assert scores
     assert scores[0].memories
     assert metadata["mock"] is True
+    assert metadata["run_role"] == "mock_pipeline_validation"
 
 
 def test_scoring_distinguishes_contaminated_and_rejected() -> None:
@@ -107,12 +111,14 @@ def test_summary_and_manual_audit_created(tmp_path: Path) -> None:
         audit_sample_size=3,
         judge_backend="none",
         judge_model="same",
+        allow_download=True,
     )
     write_summary(out, scores, items, DEFAULT_METHODS[:3], metadata)
     assert (out / "summary.csv").exists()
     assert (out / "summary.md").exists()
     assert (out / "manual_audit_sample.csv").exists()
     assert (out / "manual_audit_instructions.md").exists()
+    assert (out / "case_scores.jsonl").exists()
     assert json.loads((out / "run_metadata.json").read_text())["scientific_evidence"] is False
 
 
@@ -133,3 +139,17 @@ def test_openai_compatible_accepts_base_url_and_api_key(tmp_path: Path) -> None:
     )
     assert client.base_url == "http://localhost:8000/v1"
     assert client.api_key == "dummy"
+
+
+def test_run_classifier_blocks_tiny_and_small_runs() -> None:
+    tiny = classify_run({"mock": False, "model": "sshleifer/tiny-gpt2", "n_items": 80})
+    small = classify_run({"mock": False, "model": "Qwen/Qwen2.5-7B-Instruct", "n_items": 5})
+    real = classify_run({"mock": False, "model": "Qwen/Qwen2.5-7B-Instruct", "n_items": 80})
+    assert tiny["scientific_evidence"] is False
+    assert small["scientific_evidence"] is False
+    assert real["scientific_evidence"] is True
+
+
+def test_model_config_loads_recommended_models() -> None:
+    config = load_model_config("configs/open_models.yaml")
+    assert "Qwen/Qwen2.5-1.5B-Instruct" in select_models(config, "recommended_small")

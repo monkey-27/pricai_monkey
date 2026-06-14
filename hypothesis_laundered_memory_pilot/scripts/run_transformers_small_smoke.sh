@@ -8,4 +8,5 @@ python run_pilot.py \
   --n 5 \
   --out outputs/transformers_small_smoke \
   --temperature 0 \
-  --max-new-tokens 400
+  --max-new-tokens 400 \
+  --allow-download false
