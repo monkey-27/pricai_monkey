@@ -26,6 +26,15 @@ def build_index(outputs_dir: str | Path = "outputs", out_path: str | Path | None
         metadata = json.loads(meta_path.read_text(encoding="utf-8"))
         metadata.update(classify_run(metadata))
         summary = _read_summary(run_dir / "summary.csv")
+        complete = bool(summary) and (run_dir / "case_scores.jsonl").exists()
+        if not complete and not metadata.get("mock"):
+            metadata.update(
+                {
+                    "run_role": "incomplete_run",
+                    "scientific_evidence": False,
+                    "research_verdict": "NO_SCIENTIFIC_RUNS",
+                }
+            )
         rows.append((run_dir.name, metadata, summary, run_dir / "summary.md"))
     skipped = _read_skipped(outputs / "skipped_runs.jsonl")
     lines = [

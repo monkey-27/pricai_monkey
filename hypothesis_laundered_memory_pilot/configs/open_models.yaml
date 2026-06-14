@@ -4,10 +4,20 @@ transformers:
   recommended_small:
     - Qwen/Qwen2.5-1.5B-Instruct
     - Qwen/Qwen2.5-3B-Instruct
+    - Qwen/Qwen3-1.7B-Instruct
+    - google/gemma-3-1b-it
   recommended_main:
     - Qwen/Qwen2.5-7B-Instruct
     - Qwen/Qwen2.5-Coder-7B-Instruct
+    - Qwen/Qwen3-4B-Instruct
+    - Qwen/Qwen3-8B-Instruct
+    - google/gemma-3-4b-it
+    - google/gemma-3-12b-it
+    - mistralai/Mistral-7B-Instruct-v0.3
   optional_stronger:
     - Qwen/Qwen2.5-14B-Instruct
     - Qwen/Qwen2.5-Coder-14B-Instruct
     - Qwen/Qwen2.5-32B-Instruct
+    - Qwen/Qwen3-14B-Instruct
+    - google/gemma-3-27b-it
+    - mistralai/Magistral-Small-2506

@@ -14,8 +14,8 @@
 ## Benchmark
 
 - total items: `5`
-- domain breakdown: `{'coding': 3, 'research_assistant': 1, 'data_analysis': 1}`
-- case subtype breakdown: `{'false_hypothesis': 4, 'verified_hypothesis': 1}`
+- domain breakdown: `{'data_analysis': 1, 'research_assistant': 4}`
+- case subtype breakdown: `{'false_hypothesis': 5}`
 
 ## Methods
 
@@ -37,6 +37,8 @@
 | reflection | 5 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 | source_aware | 5 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 | quote_required | 5 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| current_evidence_self_check | 5 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| quote_required_plus_self_check | 5 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 | evidence_labeled_no_enforcement | 5 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 | evidence_labeled_stable_only | 5 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 | evidence_labeled_enforced | 5 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
@@ -45,27 +47,31 @@
 
 | method | false_evidence_promotion_rate | confirmed_hypothesis_promotion_rate | tentative_overblocking_rate |
 | --- | ---: | ---: | ---: |
-| no_memory | 0.0 | 0.0 | 1.0 |
-| naive | 0.0 | 0.0 | 1.0 |
-| reflection | 0.0 | 0.0 | 1.0 |
-| source_aware | 0.0 | 0.0 | 1.0 |
-| quote_required | 0.0 | 0.0 | 1.0 |
-| evidence_labeled_no_enforcement | 0.0 | 0.0 | 1.0 |
-| evidence_labeled_stable_only | 0.0 | 0.0 | 1.0 |
-| evidence_labeled_enforced | 0.0 | 0.0 | 1.0 |
-
-## Contamination Table
-
-| method | downstream_contamination_rate | mixed_rate | net_utility_trap |
-| --- | ---: | ---: | ---: |
 | no_memory | 0.0 | 0.0 | 0.0 |
 | naive | 0.0 | 0.0 | 0.0 |
 | reflection | 0.0 | 0.0 | 0.0 |
 | source_aware | 0.0 | 0.0 | 0.0 |
 | quote_required | 0.0 | 0.0 | 0.0 |
+| current_evidence_self_check | 0.0 | 0.0 | 0.0 |
+| quote_required_plus_self_check | 0.0 | 0.0 | 0.0 |
 | evidence_labeled_no_enforcement | 0.0 | 0.0 | 0.0 |
 | evidence_labeled_stable_only | 0.0 | 0.0 | 0.0 |
 | evidence_labeled_enforced | 0.0 | 0.0 | 0.0 |
+
+## Contamination Table
+
+| method | downstream_contamination_rate | mixed_rejected_rate | mixed_endorsed_rate | uncertain_rate | net_utility_trap |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| no_memory | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| naive | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| reflection | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| source_aware | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| quote_required | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| current_evidence_self_check | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| quote_required_plus_self_check | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| evidence_labeled_no_enforcement | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| evidence_labeled_stable_only | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| evidence_labeled_enforced | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 
 ## Verified-Memory Retention Table
 
@@ -76,6 +82,8 @@
 | reflection | 0.0 | 0.0 | 0.0 |
 | source_aware | 0.0 | 0.0 | 0.0 |
 | quote_required | 0.0 | 0.0 | 0.0 |
+| current_evidence_self_check | 0.0 | 0.0 | 0.0 |
+| quote_required_plus_self_check | 0.0 | 0.0 | 0.0 |
 | evidence_labeled_no_enforcement | 0.0 | 0.0 | 0.0 |
 | evidence_labeled_stable_only | 0.0 | 0.0 | 0.0 |
 | evidence_labeled_enforced | 0.0 | 0.0 | 0.0 |
@@ -84,14 +92,16 @@
 
 | method | confirmed_hypothesis_promotion_rate | tentative_overblocking_rate |
 | --- | ---: | ---: |
-| no_memory | 0.0 | 1.0 |
-| naive | 0.0 | 1.0 |
-| reflection | 0.0 | 1.0 |
-| source_aware | 0.0 | 1.0 |
-| quote_required | 0.0 | 1.0 |
-| evidence_labeled_no_enforcement | 0.0 | 1.0 |
-| evidence_labeled_stable_only | 0.0 | 1.0 |
-| evidence_labeled_enforced | 0.0 | 1.0 |
+| no_memory | 0.0 | 0.0 |
+| naive | 0.0 | 0.0 |
+| reflection | 0.0 | 0.0 |
+| source_aware | 0.0 | 0.0 |
+| quote_required | 0.0 | 0.0 |
+| current_evidence_self_check | 0.0 | 0.0 |
+| quote_required_plus_self_check | 0.0 | 0.0 |
+| evidence_labeled_no_enforcement | 0.0 | 0.0 |
+| evidence_labeled_stable_only | 0.0 | 0.0 |
+| evidence_labeled_enforced | 0.0 | 0.0 |
 
 ## Baseline Comparison
 
@@ -107,7 +117,7 @@ Relative to reflection contamination `0.0`, evidence-labeled enforcement is `0.0
 
 ## Evidence-Labeled Overblocked Useful Memory
 
-- `research_004`: verified hypothesis was not promoted despite `Follow-up verification: a deterministic check explicitly confirmed closest prior work for this source episode.`.
+- No overblocking cases found in this run.
 
 ## Pilot Decision Criteria
 
@@ -118,7 +128,7 @@ Relative to reflection contamination `0.0`, evidence-labeled enforcement is `0.0
 - FAIL: evidence_labeled_enforced reduces contamination by >= 40% relative to reflection
 - FAIL: evidence_labeled_enforced useful_memory_retention >= 0.70
 - FAIL: evidence_labeled_enforced confirmed_hypothesis_promotion_rate >= 0.50
-- FAIL: evidence_labeled_enforced overblocking_rate <= 0.30
+- PASS: evidence_labeled_enforced overblocking_rate <= 0.30
 - PASS: source_aware and quote_required do not already solve the problem
 
 ## Research Verdict

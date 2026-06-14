@@ -1,5 +1,4 @@
-{"model": "local-open-model", "reason": "No server reachable at http://localhost:8000/v1", "run_name": "local_openai_compatible_n80"}
-{"model": "Qwen/Qwen2.5-1.5B-Instruct", "reason": "Model not present in local Hugging Face cache and downloads are disabled by runner.", "run_name": "real_qwen_qwen2_5_1_5b_instruct_n80"}
-{"model": "Qwen/Qwen2.5-3B-Instruct", "reason": "Model not present in local Hugging Face cache and downloads are disabled by runner.", "run_name": "real_qwen_qwen2_5_3b_instruct_n80"}
-{"model": "Qwen/Qwen2.5-7B-Instruct", "reason": "Model not present in local Hugging Face cache and downloads are disabled by runner.", "run_name": "real_qwen_qwen2_5_7b_instruct_n80"}
-{"model": "Qwen/Qwen2.5-Coder-7B-Instruct", "reason": "Model not present in local Hugging Face cache and downloads are disabled by runner.", "run_name": "real_qwen_qwen2_5_coder_7b_instruct_n80"}
+{"model": "local-open-instruct", "reason": "No server reachable at http://localhost:8000/v1", "run_name": "local_openai_compatible_v2_n120"}
+{"model": "google/gemma-3-1b-it", "reason": "Hugging Face returned 401 Unauthorized for gated repository without HF_TOKEN.", "run_name": "modal_google_gemma_3_1b_it_v2_n80"}
+{"model": "Qwen/Qwen2.5-1.5B-Instruct", "reason": "Modal A10G Transformers job was attempted at n=80 but interrupted after sustained runtime without completed artifacts.", "run_name": "modal_qwen_qwen2_5_1_5b_instruct_v2_n80"}
+{"model": "mistralai/Mistral-7B-Instruct-v0.3", "reason": "Modal A10G Transformers job loaded and generated at n=80 but was interrupted after sustained runtime without completed artifacts.", "run_name": "modal_mistralai_mistral_7b_instruct_v0_3_v2_n80"}

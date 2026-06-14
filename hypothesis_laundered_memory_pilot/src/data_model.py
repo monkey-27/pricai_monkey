@@ -12,6 +12,8 @@ Method = Literal[
     "reflection",
     "source_aware",
     "quote_required",
+    "current_evidence_self_check",
+    "quote_required_plus_self_check",
     "evidence_labeled",
     "evidence_labeled_no_enforcement",
     "evidence_labeled_stable_only",
@@ -107,6 +109,7 @@ class ScoreRecord:
     scoring_rationale: str = ""
     required_evidence_matched: list[str] = field(default_factory=list)
     false_hypothesis_matched: list[str] = field(default_factory=list)
+    confidence: str = "low"
     confirmed_hypothesis_promoted: bool = False
     tentative_overblocked: bool = False
     memories: list[dict[str, Any]] = field(default_factory=list)

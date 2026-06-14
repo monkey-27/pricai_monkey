@@ -22,6 +22,13 @@ INSTRUCT_MARKERS = [
 
 
 def classify_run(metadata: dict[str, Any]) -> dict[str, Any]:
+    if metadata.get("run_role") == "failed_run":
+        return {
+            "run_role": "failed_run",
+            "scientific_evidence": False,
+            "research_verdict": "NO_SCIENTIFIC_RUNS",
+            "classification_reason": str(metadata.get("classification_reason") or "Run failed before producing complete outputs."),
+        }
     mock = bool(metadata.get("mock"))
     n_items = int(metadata.get("n_items") or metadata.get("n_requested") or 0)
     model = str(metadata.get("hf_model") or metadata.get("model") or "").lower()
@@ -33,12 +40,12 @@ def classify_run(metadata: dict[str, Any]) -> dict[str, Any]:
             "research_verdict": "MOCK_ONLY",
             "classification_reason": "Mock outputs are programmed and validate code paths only.",
         }
-    if n_items < 40 or is_smoke_model(model) or not is_instruct_model(model):
+    if n_items < 80 or is_smoke_model(model) or not is_instruct_model(model):
         return {
             "run_role": "plumbing_smoke",
             "scientific_evidence": False,
             "research_verdict": "PLUMBING_ONLY",
-            "classification_reason": "Run is too small or uses a non-instruct/tiny model.",
+            "classification_reason": "Run is too small for scientific evidence (n < 80) or uses a non-instruct/tiny model.",
         }
     if n_items >= 80 and audit_completed:
         return {

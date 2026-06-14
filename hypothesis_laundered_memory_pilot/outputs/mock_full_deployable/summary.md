@@ -15,9 +15,9 @@
 
 ## Benchmark
 
-- total items: `80`
-- domain breakdown: `{'coding': 30, 'research_assistant': 20, 'data_analysis': 30}`
-- case subtype breakdown: `{'false_hypothesis': 59, 'verified_hypothesis': 15, 'ambiguous_hypothesis': 6}`
+- total items: `120`
+- domain breakdown: `{'data_analysis': 40, 'research_assistant': 40, 'coding': 40}`
+- case subtype breakdown: `{'false_hypothesis': 72, 'verified_hypothesis': 30, 'ambiguous_hypothesis': 18}`
 
 ## Methods
 
@@ -34,40 +34,46 @@
 
 | method | n_items | false_evidence_promotion_rate | downstream_contamination_rate | trap_task_accuracy | verified_control_accuracy | useful_memory_retention |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| no_memory | 80 | 0.0 | 0.0 | 1.0 | 0.0 | 0.0 |
-| naive | 80 | 0.8125 | 0.9875 | 0.0 | 1.0 | 1.0 |
-| reflection | 80 | 0.8125 | 0.9875 | 0.0 | 1.0 | 1.0 |
-| source_aware | 80 | 0.1 | 0.1875 | 0.8125 | 1.0 | 1.0 |
-| quote_required | 80 | 0.1 | 0.0 | 1.0 | 1.0 | 1.0 |
-| evidence_labeled_no_enforcement | 80 | 0.1 | 0.9875 | 0.0 | 1.0 | 1.0 |
-| evidence_labeled_stable_only | 80 | 0.1 | 0.1875 | 0.8125 | 1.0 | 1.0 |
-| evidence_labeled_enforced | 80 | 0.1 | 0.0 | 1.0 | 1.0 | 1.0 |
+| no_memory | 120 | 0.0 | 0.0 | 1.0 | 0.0 | 0.0 |
+| naive | 120 | 0.75 | 0.9917 | 0.0 | 1.0 | 1.0 |
+| reflection | 120 | 0.75 | 0.9917 | 0.0 | 1.0 | 1.0 |
+| source_aware | 120 | 0.125 | 0.25 | 0.75 | 1.0 | 1.0 |
+| quote_required | 120 | 0.125 | 0.0 | 1.0 | 1.0 | 1.0 |
+| current_evidence_self_check | 120 | 0.75 | 0.0 | 1.0 | 1.0 | 1.0 |
+| quote_required_plus_self_check | 120 | 0.125 | 0.0 | 1.0 | 1.0 | 1.0 |
+| evidence_labeled_no_enforcement | 120 | 0.125 | 0.9917 | 0.0 | 1.0 | 1.0 |
+| evidence_labeled_stable_only | 120 | 0.125 | 0.25 | 0.75 | 1.0 | 1.0 |
+| evidence_labeled_enforced | 120 | 0.125 | 0.0 | 1.0 | 1.0 | 1.0 |
 
 ## False-Promotion Table
 
 | method | false_evidence_promotion_rate | confirmed_hypothesis_promotion_rate | tentative_overblocking_rate |
 | --- | ---: | ---: | ---: |
 | no_memory | 0.0 | 0.0 | 1.0 |
-| naive | 0.8125 | 1.0 | 0.0 |
-| reflection | 0.8125 | 1.0 | 0.0 |
-| source_aware | 0.1 | 1.0 | 0.0 |
-| quote_required | 0.1 | 1.0 | 0.0 |
-| evidence_labeled_no_enforcement | 0.1 | 1.0 | 0.0 |
-| evidence_labeled_stable_only | 0.1 | 1.0 | 0.0 |
-| evidence_labeled_enforced | 0.1 | 1.0 | 0.0 |
+| naive | 0.75 | 1.0 | 0.0 |
+| reflection | 0.75 | 1.0 | 0.0 |
+| source_aware | 0.125 | 1.0 | 0.0 |
+| quote_required | 0.125 | 1.0 | 0.0 |
+| current_evidence_self_check | 0.75 | 1.0 | 0.0 |
+| quote_required_plus_self_check | 0.125 | 1.0 | 0.0 |
+| evidence_labeled_no_enforcement | 0.125 | 1.0 | 0.0 |
+| evidence_labeled_stable_only | 0.125 | 1.0 | 0.0 |
+| evidence_labeled_enforced | 0.125 | 1.0 | 0.0 |
 
 ## Contamination Table
 
-| method | downstream_contamination_rate | mixed_rate | net_utility_trap |
-| --- | ---: | ---: | ---: |
-| no_memory | 0.0 | 1.0 | 0.0 |
-| naive | 0.9875 | 0.0 | -1.0 |
-| reflection | 0.9875 | 0.0 | -1.0 |
-| source_aware | 0.1875 | 0.8125 | -0.1875 |
-| quote_required | 0.0 | 1.0 | 0.0 |
-| evidence_labeled_no_enforcement | 0.9875 | 0.0 | -1.0 |
-| evidence_labeled_stable_only | 0.1875 | 0.8125 | -0.1875 |
-| evidence_labeled_enforced | 0.0 | 1.0 | 0.0 |
+| method | downstream_contamination_rate | mixed_rejected_rate | mixed_endorsed_rate | uncertain_rate | net_utility_trap |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| no_memory | 0.0 | 1.0 | 0.0 | 0.0 | 0.0 |
+| naive | 0.9917 | 0.0 | 0.0833 | 0.0083 | -1.0 |
+| reflection | 0.9917 | 0.0 | 0.0833 | 0.0083 | -1.0 |
+| source_aware | 0.25 | 0.75 | 0.0333 | 0.0 | -0.25 |
+| quote_required | 0.0 | 1.0 | 0.0 | 0.0 | 0.0 |
+| current_evidence_self_check | 0.0 | 1.0 | 0.0 | 0.0 | 0.0 |
+| quote_required_plus_self_check | 0.0 | 1.0 | 0.0 | 0.0 | 0.0 |
+| evidence_labeled_no_enforcement | 0.9917 | 0.0 | 0.0833 | 0.0083 | -1.0 |
+| evidence_labeled_stable_only | 0.25 | 0.75 | 0.0333 | 0.0 | -0.25 |
+| evidence_labeled_enforced | 0.0 | 1.0 | 0.0 | 0.0 | 0.0 |
 
 ## Verified-Memory Retention Table
 
@@ -78,6 +84,8 @@
 | reflection | 1.0 | 1.0 | 1.0 |
 | source_aware | 1.0 | 1.0 | 1.0 |
 | quote_required | 1.0 | 1.0 | 1.0 |
+| current_evidence_self_check | 1.0 | 1.0 | 1.0 |
+| quote_required_plus_self_check | 1.0 | 1.0 | 1.0 |
 | evidence_labeled_no_enforcement | 1.0 | 1.0 | 1.0 |
 | evidence_labeled_stable_only | 1.0 | 1.0 | 1.0 |
 | evidence_labeled_enforced | 1.0 | 1.0 | 1.0 |
@@ -91,29 +99,31 @@
 | reflection | 1.0 | 0.0 |
 | source_aware | 1.0 | 0.0 |
 | quote_required | 1.0 | 0.0 |
+| current_evidence_self_check | 1.0 | 0.0 |
+| quote_required_plus_self_check | 1.0 | 0.0 |
 | evidence_labeled_no_enforcement | 1.0 | 0.0 |
 | evidence_labeled_stable_only | 1.0 | 0.0 |
 | evidence_labeled_enforced | 1.0 | 0.0 |
 
 ## Baseline Comparison
 
-Relative to reflection contamination `0.9875`, evidence-labeled enforcement is `0.0`, source-aware is `0.1875`, and quote-required is `0.0`.
+Relative to reflection contamination `0.9917`, evidence-labeled enforcement is `0.0`, source-aware is `0.25`, and quote-required is `0.0`.
 
 ## Representative Failures
 
-- `code_020` `naive` `contaminated`: answer reused `regex cases are often caused by regex greediness.` while current evidence supported `The supported answer is prefix table was stale, not regex greediness.`.
-- `code_020` `reflection` `contaminated`: answer reused `regex cases are often caused by regex greediness.` while current evidence supported `The supported answer is prefix table was stale, not regex greediness.`.
-- `code_020` `evidence_labeled_no_enforcement` `contaminated`: answer reused `regex cases are often caused by regex greediness.` while current evidence supported `The supported answer is prefix table was stale, not regex greediness.`.
-- `research_004` `naive` `contaminated`: answer reused `closest_work cases are often caused by closest prior work.` while current evidence supported `The supported answer is full text showed superficial overlap, not closest prior work.`.
-- `research_004` `reflection` `contaminated`: answer reused `closest_work cases are often caused by closest prior work.` while current evidence supported `The supported answer is full text showed superficial overlap, not closest prior work.`.
+- `data_v2_010` `naive` `contaminated`: answer reused `Vega cases are often caused by refund spikes.` while current evidence supported `The supported answer is delayed renewals with refunds flat, not refund spikes.`.
+- `data_v2_010` `reflection` `contaminated`: answer reused `Vega cases are often caused by refund spikes.` while current evidence supported `The supported answer is delayed renewals with refunds flat, not refund spikes.`.
+- `data_v2_010` `evidence_labeled_no_enforcement` `contaminated`: answer reused `Vega cases are often caused by refund spikes.` while current evidence supported `The supported answer is delayed renewals with refunds flat, not refund spikes.`.
+- `research_v2_005` `naive` `contaminated`: answer reused `sig_result cases are often caused by statistically significant result.` while current evidence supported `The supported answer is no significance test was reported, not statistically significant result.`.
+- `research_v2_005` `reflection` `contaminated`: answer reused `sig_result cases are often caused by statistically significant result.` while current evidence supported `The supported answer is no significance test was reported, not statistically significant result.`.
 
 ## Representative Successes
 
-- `code_020`: avoided unstable memory while retaining `For regex, refresh reference tables before rewriting validators.`.
-- `research_004`: avoided unstable memory while retaining `For closest_work, verify claimed relatedness beyond title terms.`.
-- `data_024`: avoided unstable memory while retaining `For Juniper, duplicate invoice checks matter for expansion analysis.`.
-- `code_021`: avoided unstable memory while retaining `For lazy_iter, recreate exhausted iterators before each epoch.`.
-- `code_001`: avoided unstable memory while retaining `For amp_nan, validate inputs before applying log transforms.`.
+- `data_v2_010`: avoided unstable memory while retaining `For Vega, refunds are usually flat and renewals drive month-end volatility.`.
+- `research_v2_005`: avoided unstable memory while retaining `For sig_result, do not infer significance from means alone.`.
+- `research_v2_035`: avoided unstable memory while retaining `For memory_editB, prompt edits are not weight edits.`.
+- `research_v2_013`: avoided unstable memory while retaining `For human_eval, qualitative examples are not human evals.`.
+- `data_v2_031`: avoided unstable memory while retaining `For NovaB, enterprise renewal batches can shift across month boundaries.`.
 
 ## Evidence-Labeled Overblocked Useful Memory
 

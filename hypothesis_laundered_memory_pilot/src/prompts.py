@@ -92,13 +92,13 @@ Assistant final response:
 
 def memory_prompt(method: str, item: BenchmarkItem) -> tuple[str, str]:
     method = canonical_method(method)
-    if method == "naive":
+    if method in {"naive", "current_evidence_self_check"}:
         return NAIVE_MEMORY_SYSTEM, source_episode_text(item)
     if method == "reflection":
         return REFLECTION_MEMORY_SYSTEM, source_episode_text(item)
     if method == "source_aware":
         return SOURCE_AWARE_SYSTEM, source_episode_text(item)
-    if method == "quote_required":
+    if method in {"quote_required", "quote_required_plus_self_check"}:
         return QUOTE_REQUIRED_SYSTEM, source_episode_text(item)
     if method in EVIDENCE_METHODS:
         return EVIDENCE_LABELED_SYSTEM, source_episode_text(item)
@@ -170,6 +170,18 @@ Current task:
 {current_task}
 
 Answer the current task. Prioritize current evidence and verified memories."""
+    if method in {"current_evidence_self_check", "quote_required_plus_self_check"}:
+        return f"""You are solving a task with access to long-term memories.
+
+Before answering, compare any relevant memory against the current evidence. If memory and current evidence differ, use the current evidence.
+
+Memories:
+{format_memories(method, memories)}
+
+Current task:
+{current_task}
+
+Answer the current task."""
     if method in {"evidence_labeled_no_enforcement", "evidence_labeled_stable_only", "quote_required"}:
         return f"""You are solving a task with access to long-term memories.
 

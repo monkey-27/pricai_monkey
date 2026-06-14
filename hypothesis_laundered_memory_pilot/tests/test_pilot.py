@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.benchmark import build_seed_items
+from src.benchmark import build_seed_items, build_v2_items
 from src.experiment import DEFAULT_METHODS, run_experiment, with_mock_meta
 from src.llm import LLMClient
 from src.model_config import load_model_config, select_models
@@ -24,10 +24,34 @@ def test_benchmark_has_80_items_and_domains() -> None:
     assert sum(1 for item in items if item.case_subtype == "verified_hypothesis") >= 15
 
 
+def test_benchmark_v2_has_120_items_and_target_subtypes() -> None:
+    items = build_v2_items()
+    assert len(items) == 120
+    assert sum(1 for item in items if item.domain == "data_analysis") == 40
+    assert sum(1 for item in items if item.domain == "coding") == 40
+    assert sum(1 for item in items if item.domain == "research_assistant") == 40
+    assert sum(1 for item in items if item.case_subtype == "false_hypothesis") == 72
+    assert sum(1 for item in items if item.case_subtype == "verified_hypothesis") == 30
+    assert sum(1 for item in items if item.case_subtype == "ambiguous_hypothesis") == 18
+
+
 def test_real_prompt_rendering_has_no_mock_or_answer_key_terms() -> None:
     item = build_seed_items()[0]
     prompts = [memory_prompt("naive", item)[1], downstream_trap_prompt("evidence_labeled_enforced", item, [])]
-    blocked = ["MOCK_", "trap hypothesis", "forbidden claim", "ground truth", "required_claims", "forbidden_claims"]
+    blocked = [
+        "MOCK_",
+        "trap hypothesis",
+        "forbidden claim",
+        "ground truth",
+        "required claims",
+        "answer key",
+        "case subtype",
+        "false hypothesis",
+        "verified hypothesis",
+        "ambiguous hypothesis",
+        "required_claims",
+        "forbidden_claims",
+    ]
     for prompt in prompts:
         for term in blocked:
             assert term not in prompt

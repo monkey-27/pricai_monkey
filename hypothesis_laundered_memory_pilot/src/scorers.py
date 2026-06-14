@@ -136,6 +136,7 @@ def score_trap_answer_detail(answer: str, item: BenchmarkItem) -> dict[str, obje
         "scoring_rationale": rationale,
         "required_evidence_matched": required,
         "false_hypothesis_matched": false_matches,
+        "confidence": "high" if label in {"correct", "contaminated", "mixed_rejected_trap"} else ("medium" if label == "mixed_endorsed_trap" else "low"),
     }
 
 

@@ -28,6 +28,7 @@ def main() -> None:
     parser.add_argument("--device", default="auto")
     parser.add_argument("--dtype", default="auto")
     parser.add_argument("--n", type=int, default=80)
+    parser.add_argument("--benchmark", default="data/benchmark_seed.json")
     parser.add_argument("--domains", default="coding,data_analysis,research_assistant")
     parser.add_argument("--methods", default=",".join(DEFAULT_METHODS))
     parser.add_argument("--out", default="outputs/run_001")
@@ -82,6 +83,7 @@ def main() -> None:
         judge_backend=args.judge_backend,
         judge_model=args.judge_model,
         allow_download=allow_download,
+        benchmark=args.benchmark,
     )
     write_summary(args.out, scores, items, methods, metadata)
     print(f"Wrote pilot outputs to {args.out}")

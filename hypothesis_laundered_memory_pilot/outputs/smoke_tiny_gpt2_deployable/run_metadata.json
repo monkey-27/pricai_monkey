@@ -1,7 +1,8 @@
 {
-  "allow_download": false,
+  "allow_download": true,
   "backend": "transformers",
   "base_url": null,
+  "benchmark": "data/benchmark_v2.json",
   "classification_reason": "Run is too small or uses a non-instruct/tiny model.",
   "device": "auto",
   "domains": [
@@ -21,6 +22,8 @@
     "reflection",
     "source_aware",
     "quote_required",
+    "current_evidence_self_check",
+    "quote_required_plus_self_check",
     "evidence_labeled_no_enforcement",
     "evidence_labeled_stable_only",
     "evidence_labeled_enforced"

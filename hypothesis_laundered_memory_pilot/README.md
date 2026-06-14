@@ -12,18 +12,21 @@ Mock mode is only a pipeline validation tool.
 WARNING: This run used mock mode. Mock outputs are programmed to follow the expected pattern and are not scientific evidence.
 ```
 
-Only non-mock runs against open/local models should be treated as preliminary experimental evidence. Even those require manual audit and more than one model before paper-level claims.
+Only completed non-mock runs against real open instruct/chat models with `n >= 80` should be treated as preliminary experimental evidence. Even those require manual audit and more than one model family before paper-level claims.
 
 Runs are classified automatically:
 
 - `mock_pipeline_validation`: mock mode, never scientific evidence.
-- `plumbing_smoke`: tiny/non-instruct models or `n < 40`, never scientific evidence.
-- `preliminary_experiment`: real instruct/chat model with `n >= 40`.
+- `plumbing_smoke`: tiny/non-instruct models or `n < 80`, never scientific evidence.
+- `preliminary_experiment`: completed real instruct/chat model with `n >= 80`.
 - `paper_candidate_evidence`: real instruct/chat model with `n >= 80` and completed manual audit.
+- `failed_run` / `incomplete_run`: attempted runs without complete outputs, never scientific evidence.
+
+Current saved verdict: `NO_SCIENTIFIC_RUNS`. The repo is deployable, but the saved artifacts do not yet contain completed scientific evidence from real instruct models.
 
 ## Benchmark
 
-The generated seed benchmark has 80 examples:
+The default seed benchmark has 80 examples:
 
 - 30 data-analysis / business analytics cases
 - 30 coding / debugging cases
@@ -36,6 +39,14 @@ Each item contains a source episode, a plausible unsupported hypothesis, a futur
 - `ambiguous_hypothesis`
 
 Verified-hypothesis cases check whether methods can promote a hypothesis once explicit verification appears, instead of becoming uselessly conservative.
+
+The paper-grade pilot benchmark is:
+
+```text
+data/benchmark_v2.json
+```
+
+It has 120 examples: 40 coding/debugging, 40 data-analysis/business analytics, and 40 research-assistant/literature-review cases, with false, verified, and ambiguous hypothesis subtypes.
 
 ## Install
 
@@ -126,7 +137,7 @@ When `--allow-download false`, Transformers uses local files only and unavailabl
 Default methods:
 
 ```text
-no_memory,naive,reflection,source_aware,quote_required,evidence_labeled_no_enforcement,evidence_labeled_stable_only,evidence_labeled_enforced
+no_memory,naive,reflection,source_aware,quote_required,current_evidence_self_check,quote_required_plus_self_check,evidence_labeled_no_enforcement,evidence_labeled_stable_only,evidence_labeled_enforced
 ```
 
 `evidence_labeled` remains as a backward-compatible alias for `evidence_labeled_enforced`.
@@ -208,6 +219,7 @@ scripts/run_transformers_qwen7b.sh
 scripts/run_transformers_small_smoke.sh
 scripts/run_recommended_open_models.sh
 scripts/run_all_available.sh
+scripts/run_scientific_pilot.sh
 ```
 
 One-command local sweep:
@@ -221,6 +233,20 @@ It runs mock validation, a tiny Transformers smoke if possible, probes a local O
 ```text
 outputs/experiment_index.md
 ```
+
+Scientific pilot runner:
+
+```bash
+bash scripts/run_scientific_pilot.sh --allow-download true --target minimum
+```
+
+Modal helper for cloud GPU attempts:
+
+```bash
+python3 -m modal run scripts/modal_scientific_pilot.py --model Qwen/Qwen2.5-1.5B-Instruct --n 80 --max-new-tokens 120
+```
+
+If a model is gated, unavailable, interrupted, or too slow to produce complete artifacts, the run must be recorded as skipped or incomplete. Do not treat partial metadata as evidence.
 
 ## Continuation Criteria
 

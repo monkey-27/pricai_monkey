@@ -29,6 +29,8 @@ DEFAULT_METHODS = [
     "reflection",
     "source_aware",
     "quote_required",
+    "current_evidence_self_check",
+    "quote_required_plus_self_check",
     "evidence_labeled_no_enforcement",
     "evidence_labeled_stable_only",
     "evidence_labeled_enforced",
@@ -58,9 +60,10 @@ def run_experiment(
     judge_backend: str,
     judge_model: str,
     allow_download: bool = True,
+    benchmark: str | None = None,
 ) -> tuple[list[ScoreRecord], list[BenchmarkItem], dict[str, Any]]:
     out_dir = ensure_dir(out)
-    data_path = Path(__file__).resolve().parents[1] / "data" / "benchmark_seed.json"
+    data_path = Path(benchmark) if benchmark else Path(__file__).resolve().parents[1] / "data" / "benchmark_seed.json"
     items = load_benchmark(data_path, n=n, domains=domains, seed=seed)
     client = LLMClient(
         model=model,
@@ -87,6 +90,7 @@ def run_experiment(
         "judge_backend": judge_backend,
         "judge_model": judge_model,
         "manual_audit_completed": False,
+        "benchmark": str(data_path),
     }
     metadata.update(classify_run(metadata))
     (out_dir / "run_metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
@@ -148,6 +152,7 @@ def run_experiment(
                 scoring_rationale=detail["scoring_rationale"],
                 required_evidence_matched=detail["required_evidence_matched"],
                 false_hypothesis_matched=detail["false_hypothesis_matched"],
+                confidence=str(detail["confidence"]),
                 confirmed_hypothesis_promoted=confirmed_hypothesis_promoted(memories, item),
                 tentative_overblocked=tentative_overblocked(memories, item),
                 memories=[asdict(m) for m in memories],
@@ -182,12 +187,18 @@ def case_score_row(score: ScoreRecord) -> dict[str, Any]:
         "domain": score.domain,
         "case_subtype": score.case_subtype,
         "method": score.method,
+        "memory_text": json.dumps(score.memories, ensure_ascii=True),
         "memories": score.memories,
+        "answer": score.trap_answer,
         "downstream_answer": score.trap_answer,
+        "auto_label": score.downstream_label,
         "deterministic_label": score.downstream_label,
         "scoring_rationale": score.scoring_rationale,
+        "matched_true_evidence": score.required_evidence_matched,
         "required_evidence_matched": score.required_evidence_matched,
+        "matched_false_hypothesis": score.false_hypothesis_matched,
         "false_hypothesis_matched": score.false_hypothesis_matched,
+        "confidence": score.confidence,
     }
 
 
@@ -199,7 +210,7 @@ def extract_memories(client: LLMClient, method: str, item: BenchmarkItem) -> lis
     parsed, error = parse_json_lenient(raw)
     if parsed is None:
         return [MemoryRecord(memory=raw, evidence_type="Self-derived", status="Tentative", raw={"parse_error": error})]
-    if method in {"naive", "reflection", "source_aware"}:
+    if method in {"naive", "reflection", "source_aware", "current_evidence_self_check"}:
         if isinstance(parsed, list):
             return [MemoryRecord(memory=str(x), raw=x) for x in parsed]
         return [MemoryRecord(memory=str(parsed), raw=parsed)]
@@ -237,16 +248,22 @@ def with_mock_meta(prompt: str, item: BenchmarkItem) -> str:
 def write_manual_audit(out_dir: Path, items: list[BenchmarkItem], scores: list[ScoreRecord], sample_size: int, seed: int) -> None:
     item_map = {item.id: item for item in items}
     selected: list[ScoreRecord] = []
-    selected.extend([s for s in scores if s.method in {"naive", "reflection"} and s.downstream_contamination][:5])
+    if sample_size >= 40:
+        contam_n, labeled_n, provenance_n, self_check_n, uncertain_n = 10, 10, 10, 5, 5
+    else:
+        contam_n = labeled_n = provenance_n = uncertain_n = max(1, sample_size // 4)
+        self_check_n = max(1, sample_size // 8)
+    selected.extend([s for s in scores if s.method in {"naive", "reflection"} and s.downstream_contamination][:contam_n])
     selected.extend(
         [
             s
             for s in scores
             if s.method == "evidence_labeled_enforced" and s.trap_task_correct and s.control_task_correct and not s.false_evidence_promotion
-        ][:5]
+        ][:labeled_n]
     )
-    selected.extend([s for s in scores if s.method in {"source_aware", "quote_required"}][:5])
-    selected.extend([s for s in scores if s.downstream_label == "uncertain"][:5])
+    selected.extend([s for s in scores if s.method in {"source_aware", "quote_required"}][:provenance_n])
+    selected.extend([s for s in scores if s.method in {"current_evidence_self_check", "quote_required_plus_self_check"}][:self_check_n])
+    selected.extend([s for s in scores if s.downstream_label == "uncertain"][:uncertain_n])
     rng = random.Random(seed)
     remaining = [s for s in scores if (s.item_id, s.method) not in {(x.item_id, x.method) for x in selected}]
     rng.shuffle(remaining)

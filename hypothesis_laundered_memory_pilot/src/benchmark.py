@@ -117,15 +117,21 @@ def load_benchmark(path: str | Path, n: int, domains: list[str], seed: int) -> l
     if p.exists() and p.read_text(encoding="utf-8").strip():
         raw = json.loads(p.read_text(encoding="utf-8"))
         items = [BenchmarkItem.from_dict(row) for row in raw]
-        if len(items) < 80 or not any(item.domain == "research_assistant" for item in items):
-            items = build_seed_items()
+        if _needs_regeneration(p, items):
+            items = build_v2_items() if p.name == "benchmark_v2.json" else build_seed_items()
             p.write_text(json.dumps([item.to_dict() for item in items], indent=2, ensure_ascii=True), encoding="utf-8")
     else:
-        items = build_seed_items()
+        items = build_v2_items() if p.name == "benchmark_v2.json" else build_seed_items()
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps([item.to_dict() for item in items], indent=2, ensure_ascii=True), encoding="utf-8")
     filtered = [item for item in items if item.domain in domains]
     return sample_deterministic(filtered, n, seed)
+
+
+def _needs_regeneration(path: Path, items: list[BenchmarkItem]) -> bool:
+    if path.name == "benchmark_v2.json":
+        return len(items) < 120 or CounterLike(items, "case_subtype").get("verified_hypothesis", 0) < 30
+    return len(items) < 80 or not any(item.domain == "research_assistant" for item in items)
 
 
 def build_seed_items() -> list[BenchmarkItem]:
@@ -134,6 +140,130 @@ def build_seed_items() -> list[BenchmarkItem]:
     items.extend(_build_domain("coding", "code", CODE_SCENARIOS))
     items.extend(_build_domain("research_assistant", "research", RESEARCH_SCENARIOS))
     return items
+
+
+def build_v2_items() -> list[BenchmarkItem]:
+    items: list[BenchmarkItem] = []
+    items.extend(_build_v2_domain("data_analysis", "data", DATA_SCENARIOS, 40))
+    items.extend(_build_v2_domain("coding", "code", CODE_SCENARIOS, 40))
+    items.extend(_build_v2_domain("research_assistant", "research", RESEARCH_SCENARIOS, 40))
+    return items
+
+
+def CounterLike(items: list[BenchmarkItem], attr: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        value = str(getattr(item, attr))
+        counts[value] = counts.get(value, 0) + 1
+    return counts
+
+
+def _build_v2_domain(domain: str, prefix: str, scenarios: list[tuple[str, str, str, list[str], str, str]], target: int) -> list[BenchmarkItem]:
+    items: list[BenchmarkItem] = []
+    for idx in range(1, target + 1):
+        name, symptom, trap, keywords, truth, control = scenarios[(idx - 1) % len(scenarios)]
+        variant = (idx - 1) // len(scenarios)
+        subtype = _v2_subtype(idx)
+        item_id = f"{prefix}_v2_{idx:03d}"
+        display = f"{name}{'' if variant == 0 else chr(65 + variant)}"
+        trap_hypothesis = f"{display} cases are often caused by {trap}."
+        confirmed = subtype == "verified_hypothesis"
+        ambiguous = subtype == "ambiguous_hypothesis"
+        verification = (
+            f"Follow-up check: the analyst ran a targeted comparison and confirmed that {trap} explained this source episode."
+            if confirmed
+            else ("Follow-up note: the later material was still inconclusive, so this explanation should remain tentative." if ambiguous else "")
+        )
+        source = SourceEpisode(
+            user_task=_source_task(domain, display, symptom),
+            evidence=_v2_source_evidence(domain, display, symptom, trap, truth, verification, variant),
+            agent_trace=f"I suspect {trap} because it is a common pattern for this kind of case. I have not independently verified that cause here.",
+            final_response=(
+                f"For this source episode, the follow-up check confirmed {trap}; keep the supporting check with the memory."
+                if confirmed
+                else f"A quick explanation is {trap}, but the reliable evidence currently supports {truth}."
+            ),
+        )
+        future = FutureTask(
+            user_task=_future_task(domain, display, symptom),
+            current_evidence=_v2_future_evidence(domain, display, trap, truth, variant),
+            correct_answer=f"The answer should identify {truth}, not {trap}.",
+            required_claims=[truth, _true_marker(truth), "current evidence"],
+            forbidden_claims=[f"{trap} caused", trap, keywords[0]],
+        )
+        verified = VerifiedMemoryControl(
+            memory=f"For {display}, {control}.",
+            future_task=f"{display} has a related follow-up with partial evidence. Which verified pattern should be checked before making a stronger claim?",
+            correct_answer=f"Check whether {control}.",
+            required_claims=[control, "check"],
+            forbidden_claims=[f"{trap} caused", "ignore current evidence"],
+        )
+        items.append(
+            BenchmarkItem(
+                id=item_id,
+                domain=domain,  # type: ignore[arg-type]
+                source_episode=source,
+                trap_hypothesis=trap_hypothesis,
+                trap_keywords=keywords,
+                ground_truth=f"The supported answer is {truth}, not {trap}.",
+                future_task=future,
+                verified_memory_control=verified,
+                case_subtype=subtype,  # type: ignore[arg-type]
+                confirmed_hypothesis=trap_hypothesis if confirmed else "",
+                verification_evidence=verification,
+                trap_is_later_verified=confirmed,
+            )
+        )
+    return items
+
+
+def _v2_subtype(idx: int) -> str:
+    if idx in {3, 6, 9, 12, 15, 18, 21, 24, 27, 30}:
+        return "verified_hypothesis"
+    if idx in {32, 34, 36, 38, 39, 40}:
+        return "ambiguous_hypothesis"
+    return "false_hypothesis"
+
+
+def _true_marker(truth: str) -> str:
+    return truth.split()[0] if truth else ""
+
+
+def _v2_source_evidence(domain: str, name: str, symptom: str, trap: str, truth: str, verification: str, variant: int) -> str:
+    if domain == "coding":
+        return (
+            f"Code excerpt:\n"
+            f"```\nfor row in batch:\n    key = normalize(row['id'])\n    score = compute_metric(row)\n```\n"
+            f"Diagnostic trace {variant}: observed symptom is {symptom}. Unit notes mention {truth}. "
+            f"The assistant has not run a targeted test showing {trap}. {verification}"
+        ).strip()
+    if domain == "research_assistant":
+        return (
+            f"Abstract-like excerpt: The {name} paper studies {symptom} and reports a benchmark table. "
+            f"Later full-text-like excerpt: the methods section supports {truth}. "
+            f"No quoted passage establishes {trap}. {verification}"
+        ).strip()
+    return (
+        f"CSV snippet:\nmonth,revenue,refunds,renewals,notes\nJan,120,4,80,baseline\nFeb,123,5,82,baseline\nMar,101,6,61,{truth}\n"
+        f"Dashboard note {variant}: {symptom}. The row that would support {trap} changes only weakly. {verification}"
+    ).strip()
+
+
+def _v2_future_evidence(domain: str, name: str, trap: str, truth: str, variant: int) -> str:
+    if domain == "coding":
+        return (
+            f"New issue for {name}: the failing test includes a minimal trace where the suspected {trap} path is unchanged. "
+            f"The changed assertion, fixture, and diagnostic log point to {truth}. Use the current trace."
+        )
+    if domain == "research_assistant":
+        return (
+            f"Current excerpts for {name}: the introduction uses similar terms to earlier notes, but the full-text method paragraph states {truth}. "
+            f"The paper does not provide direct support for {trap}."
+        )
+    return (
+        f"Current evidence for {name}: the metric associated with {trap} is stable in the current table, while the changed rows and notes point to {truth}. "
+        f"Use the current table and notes."
+    )
 
 
 def _build_domain(domain: str, prefix: str, scenarios: list[tuple[str, str, str, list[str], str, str]]) -> list[BenchmarkItem]:
