@@ -1,0 +1,9 @@
+method,n_items,false_evidence_promotion_rate,downstream_contamination_rate,trap_task_accuracy,verified_control_accuracy,useful_memory_retention,mixed_rate,confirmed_hypothesis_promotion_rate,tentative_overblocking_rate,net_utility_trap,net_utility_control
+no_memory,80,0.0,0.0,1.0,0.0,0.0,1.0,0.0,1.0,0.0,0.0
+naive,80,0.8125,0.9875,0.0,1.0,1.0,0.0,1.0,0.0,-1.0,1.0
+reflection,80,0.8125,0.9875,0.0,1.0,1.0,0.0,1.0,0.0,-1.0,1.0
+source_aware,80,0.1,0.1875,0.8125,1.0,1.0,0.8125,1.0,0.0,-0.1875,1.0
+quote_required,80,0.1,0.0,1.0,1.0,1.0,1.0,1.0,0.0,0.0,1.0
+evidence_labeled_no_enforcement,80,0.1,0.9875,0.0,1.0,1.0,0.0,1.0,0.0,-1.0,1.0
+evidence_labeled_stable_only,80,0.1,0.1875,0.8125,1.0,1.0,0.8125,1.0,0.0,-0.1875,1.0
+evidence_labeled_enforced,80,0.1,0.0,1.0,1.0,1.0,1.0,1.0,0.0,0.0,1.0
