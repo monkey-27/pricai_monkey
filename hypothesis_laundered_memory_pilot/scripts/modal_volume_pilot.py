@@ -39,9 +39,13 @@ results_volume = modal.Volume.from_name("hlm-results", create_if_missing=True)
 hf_secret = modal.Secret.from_name("huggingface-token")
 
 
-def _safe_name(model_id: str, n: int) -> str:
+def _safe_name(model_id: str, n: int, suffix: str = "") -> str:
     safe = model_id.lower().replace("/", "_").replace("-", "_").replace(".", "_")
-    return f"modal_{safe}_v2_n{n}"
+    name = f"modal_{safe}_v2_n{n}"
+    if suffix:
+        clean_suffix = suffix.lower().replace("/", "_").replace("-", "_").replace(".", "_")
+        name = f"{name}_{clean_suffix}"
+    return name
 
 
 @app.function(
@@ -51,10 +55,10 @@ def _safe_name(model_id: str, n: int) -> str:
     volumes={"/cache": hf_cache, "/results": results_volume},
     secrets=[hf_secret],
 )
-def run_model_to_volume(model_id: str, n: int = 80, max_new_tokens: int = 80) -> dict[str, str]:
+def run_model_to_volume(model_id: str, n: int = 80, max_new_tokens: int = 80, run_suffix: str = "") -> dict[str, str]:
     if os.environ.get("HF_TOKEN"):
         os.environ["HUGGING_FACE_HUB_TOKEN"] = os.environ["HF_TOKEN"]
-    run_name = _safe_name(model_id, n)
+    run_name = _safe_name(model_id, n, run_suffix)
     out_dir = RESULTS_DIR / run_name
     out_dir.mkdir(parents=True, exist_ok=True)
     cmd = [
@@ -84,6 +88,7 @@ def run_model_to_volume(model_id: str, n: int = 80, max_new_tokens: int = 80) ->
     log_path = out_dir / "modal_run.log"
     with log_path.open("w", encoding="utf-8") as log:
         log.write("COMMAND: " + " ".join(cmd) + "\n\n")
+        log.write("HF_TOKEN_PRESENT: " + str(bool(os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN"))) + "\n\n")
         log.flush()
         result = subprocess.run(cmd, cwd=APP_DIR, text=True, stdout=log, stderr=subprocess.STDOUT)
     payload = {"run_name": run_name, "model_id": model_id, "returncode": result.returncode}
@@ -110,6 +115,32 @@ def fetch_run(run_name: str) -> dict[str, str]:
     return payload
 
 
+@app.function(image=image, volumes={"/results": results_volume})
+def status_run(run_name: str) -> dict[str, object]:
+    root = RESULTS_DIR / run_name
+    if not root.exists():
+        return {"run_name": run_name, "exists": False}
+    files: list[dict[str, object]] = []
+    for path in sorted(root.rglob("*")):
+        if path.is_file():
+            rel = path.relative_to(root).as_posix()
+            files.append({"path": rel, "bytes": path.stat().st_size})
+    cache_path = root / "llm_cache.jsonl"
+    log_path = root / "modal_run.log"
+    status_path = root / "modal_status.json"
+    return {
+        "run_name": run_name,
+        "exists": True,
+        "files": files,
+        "cache_lines": sum(1 for _ in cache_path.open("r", encoding="utf-8")) if cache_path.exists() else 0,
+        "has_summary": (root / "summary.csv").exists() and (root / "summary.md").exists(),
+        "has_case_scores": (root / "case_scores.jsonl").exists(),
+        "has_modal_status": status_path.exists(),
+        "modal_status": status_path.read_text(encoding="utf-8", errors="replace") if status_path.exists() else "",
+        "log_tail": "\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-40:]) if log_path.exists() else "",
+    }
+
+
 @app.local_entrypoint()
 def main(
     action: str = "spawn",
@@ -117,16 +148,17 @@ def main(
     n: int = 80,
     max_new_tokens: int = 80,
     run_name: str = "",
+    run_suffix: str = "",
 ) -> None:
     if action == "submit":
-        print(json.dumps(run_model_to_volume.remote(model, n=n, max_new_tokens=max_new_tokens), indent=2))
+        print(json.dumps(run_model_to_volume.remote(model, n=n, max_new_tokens=max_new_tokens, run_suffix=run_suffix), indent=2))
         return
     if action == "spawn":
-        call = run_model_to_volume.spawn(model, n=n, max_new_tokens=max_new_tokens)
+        call = run_model_to_volume.spawn(model, n=n, max_new_tokens=max_new_tokens, run_suffix=run_suffix)
         print(
             json.dumps(
                 {
-                    "run_name": _safe_name(model, n),
+                    "run_name": _safe_name(model, n, run_suffix),
                     "model": model,
                     "function_call_id": call.object_id,
                     "status": "spawned",
@@ -140,7 +172,7 @@ def main(
         return
     if action == "fetch":
         if not run_name:
-            run_name = _safe_name(model, n)
+            run_name = _safe_name(model, n, run_suffix)
         payload = fetch_run.remote(run_name)
         out = Path("outputs") / run_name
         if out.exists():
@@ -153,5 +185,10 @@ def main(
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
         print(json.dumps({"run_name": run_name, "files": sorted(k for k in payload if not k.startswith("_"))}, indent=2))
+        return
+    if action == "status":
+        if not run_name:
+            run_name = _safe_name(model, n, run_suffix)
+        print(json.dumps(status_run.remote(run_name), indent=2, sort_keys=True))
         return
     raise ValueError(f"Unknown action: {action}")
